@@ -37,23 +37,28 @@
                                         (task-type unquote
                                                    (assoc-ref t "task_type"))
                                         (sender unquote
-                                                (unescape-str (assoc-ref t "sender")))
+                                                (unescape-str (assoc-ref t
+                                                               "sender")))
                                         (subject unquote
-                                                 (unescape-str (assoc-ref t "subject")))
+                                                 (unescape-str (assoc-ref t
+                                                                "subject")))
                                         (recipients unquote
-                                                    (unescape-str (assoc-ref t "recipients")))
+                                                    (unescape-str (assoc-ref t
+                                                                   "recipients")))
                                         (body unquote
-                                              (unescape-str (assoc-ref t "body")))
+                                              (unescape-str (assoc-ref t
+                                                                       "body")))
                                         (created-at unquote
                                                     (assoc-ref t "created_at"))
                                         (updated-at unquote
                                                     (assoc-ref t "updated_at"))))
                                     tasks)))
          (:mime rc
-          (list->vector formatted-tasks)))))
+                (list->vector formatted-tasks)))))
 
 (post "/api/v1/tasks"
       #:mime 'json
+      #:from-post 'json
       (lambda (rc)
         (catch #t
                (lambda ()
@@ -72,10 +77,8 @@
                           #:recipients (escape-str (assoc-ref b "recipients"))
                           #:body (escape-str (assoc-ref b "body"))
                           #:created_at now)
-                   (http-status 200
-                                (lambda ()
-                                  (:mime rc
-                                         `((message unquote message)))))))
+                   (:mime rc
+                          `((message unquote message)))))
                (lambda (key . args)
                  (let* ((message (format #f
                                   "error saving task in pingwing system: ~a ~a"
