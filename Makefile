@@ -1,4 +1,4 @@
-# pingwing - Notification and E-Mail service for the jointhefreeworld platform
+# pingwing - The free and open Lisp-powered notification nexus
 
 # Copyright © Josep Bigorra <jjbigorra@gmail.com>
 

@@ -7,7 +7,7 @@
 
 [[https://jointhefreeworld.org/static-assets/badges/GNU-Guix-c48702.png]] [[https://jointhefreeworld.org/static-assets/badges/Scheme-Guile-d0730f.png]] 
 
-/Notification and E-Mail service for the jointhefreeworld platform/
+/The free and open Lisp-powered notification nexus/
 
 Tired of having to deal with the complexity of sending e-mail from every other program? Specially if you use a (micro)service oriented architecture?
 
@@ -18,8 +18,6 @@ At its core, pingwing exposes a programmatic interface (and more!) allowing you 
 Initial support includes SMTP for email delivery, with a pending integration for Slack (expect webhook wizardry soon!).
 
 The architecture is designed for future expansion, promising connectivity to a diverse range of notification sinks.
-
-/pingwing: Your Open Source, Guile-Powered Notification Nexus/
 
 This project is powered by Lisp (Guile Scheme), ~curl~ , ~make~ , SXML and the GNU Artanis web framework, among others.
 
