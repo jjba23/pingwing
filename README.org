@@ -9,7 +9,7 @@
 
 /The free and open Lisp-powered notification nexus/
 
-Tired of having to deal with the complexity of sending e-mail from every other program? Specially if you use a (micro)service oriented architecture?
+Do you want to work the complexity away of sending e-mail, Slack or other notifications, from every other program? Specially if you use a (micro)service oriented architecture?
 
 pingwing, a key component of the jointhefreeworld ecosystem, emerges as a robust and extensible solution. Architected in the elegant and powerful dialect of Lisp known as Guile Scheme, this tool gives you power (via REST API and more) to become the central notification system for your platform.
 
