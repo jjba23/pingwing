@@ -23,7 +23,7 @@ Submit a task
 curl -v -X POST \
      -H "Content-Type: application/json" \
      -d '{
-         "task_type": "send-email",
+         "task-type": "send-email",
          "sender": "noreply@wikimusic.jointhefreeworld.org",
          "subject": "Wikimusic - Password Reset",
          "recipients": "jjbigorra@gmail.com,jjbigorra+1@gmail.com",

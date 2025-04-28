@@ -13,8 +13,7 @@
                       (subject char-field
                                (#:maxlen 512))
                       (recipients char-field
-                                  (#:not-null #:maxlen 24576
-                                   #:unique))
+                                  (#:not-null #:maxlen 24576))
                       (body char-field
                             (#:not-null #:maxlen 40960))
                       (created_at date-field
