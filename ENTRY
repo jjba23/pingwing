@@ -5,6 +5,7 @@
 (use-modules (artanis artanis)
              ;; Put modules you want to be imported here
              ;; only for this file, not controllers/views
+             (ice-9 threads)
              (ice-9 i18n)
              (artanis utils))
 ;; Put whatever you want to be called before server initilization here
@@ -20,3 +21,26 @@
 (textdomain "translate")
 ;; Set base locale for gettext at startup
 (setlocale LC_MESSAGES "en_US.UTF-8")
+
+;; Store the thread object belonging to the pingwing queue worker
+(define worker-thread
+  #f)
+
+;; Procedure to start the pingwing queue worker to process jobs that haven't completed yet
+;; this is preferrably done in a different thread
+(define (start-worker)
+  (use-modules (pingwing tasks))
+  (let* ((t (call-with-new-thread pingwing-worker-thread)))
+    (set! worker-thread t)))
+
+;; Add hook on before running the Artanis application to start the queue worker
+(run-before-run! start-worker)
+
+;; Procedure to stop the pingwing queue worker
+(define (cancel-worker)
+  (display "\nterminating pingwing queue worker\n")
+  (cancel-thread worker-thread))
+
+;; Add a hook on SIGINT to stop the queue worker
+(run-when-sigint! cancel-worker)
+
