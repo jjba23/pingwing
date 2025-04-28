@@ -66,27 +66,37 @@
                (app models task))
 
   (while #t
-    (let* ((oldest-task-not-done ($task 'get
-                                        #:ret 1
-                                        #:condition (where #:task_status
-                                                           "pending")
-                                        #:order-by "created_at ASC")))
-      (unless (nil? oldest-task-not-done)
-        (catch #t
-          (lambda ()
-            (display "
+         (let* ((oldest-task-not-done ($task 'get
+                                             #:ret 1
+                                             #:condition (where #:task_status
+                                                                "pending")
+                                             #:order-by "created_at ASC")))
+           (unless (nil? oldest-task-not-done)
+             (catch #t
+                    (lambda ()
+                      (display "
 ================
 processing pingwing task
 ")
-            (display oldest-task-not-done)
-            (pingwing-send-mail #:access-key (assoc-ref (assoc-ref pingwing-settings 'mail) 'access-key)
-                                #:access-secret (assoc-ref (assoc-ref pingwing-settings 'mail) 'access-secret)
-                                #:access-server (assoc-ref (assoc-ref pingwing-settings 'mail) 'access-server)
-                                #:access-port (assoc-ref (assoc-ref pingwing-settings 'mail) 'access-port)))
-          (lambda (key . args)
-            (display (format #f "\nerror processing task: ~a ~a" key
-                             args)))))
-      (sleep 3))))
-
-
+                      (display oldest-task-not-done)
+                      (pingwing-send-mail #:access-key (assoc-ref (assoc-ref
+                                                                   pingwing-settings
+                                                                   'mail)
+                                                                  'access-key)
+                                          #:access-secret (assoc-ref (assoc-ref
+                                                                      pingwing-settings
+                                                                      'mail)
+                                                                     'access-secret)
+                                          #:access-server (assoc-ref (assoc-ref
+                                                                      pingwing-settings
+                                                                      'mail)
+                                                                     'access-server)
+                                          #:access-port (assoc-ref (assoc-ref
+                                                                    pingwing-settings
+                                                                    'mail)
+                                                                   'access-port)))
+                    (lambda (key . args)
+                      (display (format #f "\nerror processing task: ~a ~a" key
+                                       args)))))
+           (sleep 3))))
 
