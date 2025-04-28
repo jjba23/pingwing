@@ -10,7 +10,19 @@
              (artanis utils))
 ;; Put whatever you want to be called before server initilization here
 
-(init-server #:statics '(png gif jpg jpeg ico html js json csv xml css woff woff2 ttf))
+(init-server #:statics '(png gif
+                             jpg
+                             jpeg
+                             ico
+                             html
+                             js
+                             json
+                             csv
+                             xml
+                             css
+                             woff
+                             woff2
+                             ttf))
 (add-to-load-path (string-append (current-toplevel) "/lib"))
 ;; Put whatever you want to be called before server running here
 
@@ -22,6 +34,14 @@
 ;; Set base locale for gettext at startup
 (setlocale LC_MESSAGES "en_US.UTF-8")
 
+(load "env.scm")
+
+(define pingwing-settings
+  `((mail (access-key unquote pingwing-mail-access-key)
+          (access-secret unquote pingwing-mail-access-secret)
+          (access-server unquote pingwing-mail-access-server)
+          (access-port unquote pingwing-mail-access-port))))
+
 ;; Store the thread object belonging to the pingwing queue worker
 (define worker-thread
   #f)
@@ -30,7 +50,8 @@
 ;; this is preferrably done in a different thread
 (define (start-worker)
   (use-modules (pingwing tasks))
-  (let* ((t (call-with-new-thread pingwing-worker-thread)))
+  (let* ((t (call-with-new-thread (lambda ()
+                                    (pingwing-worker-thread pingwing-settings)))))
     (set! worker-thread t)))
 
 ;; Add hook on before running the Artanis application to start the queue worker

@@ -9,6 +9,17 @@
 
 /Notification and E-Mail service for the jointhefreeworld platform/
 
+** Running
+
+You will need to specify some settings for pingwing to be able to start.
+
+#+begin_src scheme
+(define pingwing-mail-access-key "AK******")
+(define pingwing-mail-access-secret "*********")
+(define pingwing-mail-access-server "email-smtp.eu-west-3.amazonaws.com")
+(define pingwing-mail-access-port 587)
+#+end_src
+
 ** Usage
 
 Retrieve tasks from the database.
@@ -20,13 +31,13 @@ curl -v 'http://localhost:50077/api/v1/tasks'
 Submit a task
 
 #+begin_src shell
-curl -v -X POST \
+curl -v \
      -H "Content-Type: application/json" \
      -d '{
          "task-type": "send-email",
-         "sender": "noreply@wikimusic.jointhefreeworld.org",
+         "sender": "No Reply - WikiMusic~~noreply@wikimusic.jointhefreeworld.org",
          "subject": "Wikimusic - Password Reset",
-         "recipients": "jjbigorra@gmail.com,jjbigorra+1@gmail.com",
+         "recipients": "Josep Bigorra~~jjbigorra@gmail.com;Josep Bigorra 1~~jjbigorra+1@gmail.com",
          "body": "Some message that I want to send"
        }' \
      'http://localhost:50077/api/v1/tasks'

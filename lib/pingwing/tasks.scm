@@ -31,7 +31,34 @@
   #:use-module (ice-9 string-fun)
   #:use-module (ice-9 iconv))
 
-(define-public (pingwing-worker-thread)
+;; sesAccess='AKIAXXXXXXXXXXXXXXXX'
+;; sesSecret='Bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'   
+;; sesFromName="Joe McJones"
+;; sesFromAddress="joe.mcjones@fakeaddress.net"
+;; sesToName="Mary McMary"
+;; sesToAddress="mary.mcmary@notmyrealmail.com"
+;; sesSubject="Test Email from Script"
+;; sesSMTP="email-smtp.us-east-1.amazonaws.com"
+;; sesPort="465"
+;; sesMessage=$'Test of line 1\nTest of line 2'
+;; sesFile="$1"
+;; sesMIMEType=`file --mime-type "$sesFile" | sed 's/.*: //'`
+
+;; curl -v --url smtps://$sesSMTP:$sesPort --ssl-reqd  --mail-from $sesFromAddress --mail-rcpt $sesToAddress  --user $sesAccess:$sesSecret -F '=(;type=multipart/mixed' -F "=$sesMessage;type=text/plain" -F "file=@$sesFile;type=$sesMIMEType;encoder=base64" -F '=)' -H "Subject: $sesSubject" -H "From: $sesFromName <$sesFromAddress>" -H "To: $sesToName <$sesToAddress>"
+
+(define* (pingwing-send-mail #:key access-key
+                             access-secret
+                             access-server
+                             access-port
+                             from-name
+                             from-address
+                             to-name
+                             to-address
+                             subject
+                             message)
+  (display (format #f "sending mail to ~a" access-server)))
+
+(define-public (pingwing-worker-thread pingwing-settings)
   (display (format #f "\n~a...\n"
                    (gettext "initializing pingwing queue worker")))
 
@@ -45,6 +72,21 @@
                                                            "pending")
                                         #:order-by "created_at ASC")))
       (unless (nil? oldest-task-not-done)
-        (display "\n================\nprocessing pingwing task\n")
-        (display oldest-task-not-done))
+        (catch #t
+          (lambda ()
+            (display "
+================
+processing pingwing task
+")
+            (display oldest-task-not-done)
+            (pingwing-send-mail #:access-key (assoc-ref (assoc-ref pingwing-settings 'mail) 'access-key)
+                                #:access-secret (assoc-ref (assoc-ref pingwing-settings 'mail) 'access-secret)
+                                #:access-server (assoc-ref (assoc-ref pingwing-settings 'mail) 'access-server)
+                                #:access-port (assoc-ref (assoc-ref pingwing-settings 'mail) 'access-port)))
+          (lambda (key . args)
+            (display (format #f "\nerror processing task: ~a ~a" key
+                             args)))))
       (sleep 3))))
+
+
+

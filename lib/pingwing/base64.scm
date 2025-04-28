@@ -32,4 +32,5 @@
               (nss:base64-decode s))
              (else s)))
          (lambda (key . args)
+           (display (format #f "error ocurred decoding string: ~a ~a" key args))
            s)))
