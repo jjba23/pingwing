@@ -40,16 +40,18 @@
                              to-name
                              to-address
                              subject
-                             body)
+                             body
+                             body-html)
   (let* ((cmd (format #f
                       (string-join '("curl -v --url smtp://~a:~a" "--ssl-reqd"
                                      "--mail-from '~a'"
                                      "--mail-rcpt '~a'"
                                      "--user ~a:~a"
-                                     "-F '=(;type=multipart/mixed'"
-                                     "-F '=~a;type=text/plain'"
-                                     ;; "-F 'file=@~a;type=~a;encoder=base64'"
+                                     "-F '=(;type=multipart/alternative'"
+                                     "-F '=~a'"
+                                     "-F '= ~a;type=text/html'"
                                      "-F '=)'"
+                                     ;; "-F 'file=@~a;type=~a;encoder=base64'"
                                      "-H \"Subject: ~a\""
                                      "-H \"From: ~a <~a>\""
                                      "-H \"To: ~a <~a>\"") " ")
@@ -60,6 +62,7 @@
                       access-key
                       access-secret
                       (escape-str body)
+                      (escape-str body-html)
                       ;; attachments
                       ;; file
                       ;; "some-file.txt"
@@ -94,7 +97,8 @@
                       #:to-name (car (string-split recipient #\^))
                       #:to-address (cadr (string-split recipient #\^))
                       #:subject (assoc-ref task "subject")
-                      #:body (assoc-ref task "body")))
+                      #:body (assoc-ref task "body")
+                      #:body-html "<h1>PRETTY</h1>"))
 
 (define-public (pingwing-worker-thread pingwing-settings)
   (display (format #f "\n~a...\n"
