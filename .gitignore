@@ -1,0 +1,4 @@
+tmp/cache/route.cache
+pingwing.db*
+tmp/*
+*.log
