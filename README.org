@@ -9,9 +9,29 @@
 
 /Notification and E-Mail service for the jointhefreeworld platform/
 
+Tired of having to deal with the complexity of sending e-mail from every other program? Specially if you use a (micro)service oriented architecture?
+
+pingwing, a key component of the jointhefreeworld ecosystem, emerges as a robust and extensible solution. Architected in the elegant and powerful dialect of Lisp known as Guile Scheme, this tool gives you power (via REST API and more) to become the central notification system for your platform.
+
+At its core, pingwing exposes a programmatic interface (and more!) allowing you to dispatch messages, electronic mail, and critical alerts with finesse. Forget juggling disparate notification mechanisms; pingwing harmonizes these streams, routing them to your chosen endpoints.
+
+Initial support includes SMTP for email delivery, with a pending integration for Slack (expect webhook wizardry soon!).
+
+The architecture is designed for future expansion, promising connectivity to a diverse range of notification sinks.
+
+/pingwing: Your Open Source, Guile-Powered Notification Nexus/
+
+This project is powered by Lisp (Guile Scheme), ~curl~ , ~make~ , SXML and the GNU Artanis web framework, among others.
+
+[[https://jointhefreeworld.org/static-assets/pingwing/pingwing-small.jpeg]]
+
+Built upon the bedrock of Free Software principles and licensed under the GPLv3 or later, pingwing proudly leverages the ubiquitous curl utility for its network plumbing, ensuring broad compatibility and efficient data transfer.
+
+For those already immersed in the AWS ecosystem, practical examples showcasing seamless integration with Amazon SES SMTP are provided, offering a glimpse into its real-world utility.
+
 ** Running
 
-You will need to specify some settings for pingwing to be able to start.
+You will need to specify some settings for pingwing to be able to start in ~env.scm~ at the root of the project.
 
 #+begin_src scheme
 (define pingwing-mail-access-key "AK******")
@@ -22,7 +42,7 @@ You will need to specify some settings for pingwing to be able to start.
 
 ** Usage
 
-Retrieve tasks from the database.
+Retrieve pending tasks from the database.
 
 #+begin_src shell
 curl -v 'http://localhost:50077/api/v1/tasks'
