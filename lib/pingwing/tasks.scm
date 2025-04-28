@@ -31,21 +31,6 @@
   #:use-module (pingwing query-escape)
   #:use-module (app models task))
 
-;; sesAccess='AKIAXXXXXXXXXXXXXXXX'
-;; sesSecret='Bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'   
-;; sesFromName="Joe McJones"
-;; sesFromAddress="joe.mcjones@fakeaddress.net"
-;; sesToName="Mary McMary"
-;; sesToAddress="mary.mcmary@notmyrealmail.com"
-;; sesSubject="Test Email from Script"
-;; sesSMTP="email-smtp.us-east-1.amazonaws.com"
-;; sesPort="465"
-;; sesMessage=$'Test of line 1\nTest of line 2'
-;; sesFile="$1"
-;; sesMIMEType=`file --mime-type "$sesFile" | sed 's/.*: //'`
-
-;; curl -v --url smtps://$sesSMTP:$sesPort --ssl-reqd  --mail-from $sesFromAddress --mail-rcpt $sesToAddress  --user $sesAccess:$sesSecret -F '=(;type=multipart/mixed' -F "=$sesMessage;type=text/plain" -F "file=@$sesFile;type=$sesMIMEType;encoder=base64" -F '=)' -H "Subject: $sesSubject" -H "From: $sesFromName <$sesFromAddress>" -H "To: $sesToName <$sesToAddress>"
-
 (define* (pingwing-send-mail #:key access-key
                              access-secret
                              access-server
@@ -56,7 +41,37 @@
                              to-address
                              subject
                              body)
-  (display (format #f "\nsending mail to ~a" access-server)))
+  (let* ((cmd (format #f
+                      (string-join '("curl -v --url smtp://~a:~a" "--ssl-reqd"
+                                     "--mail-from '~a'"
+                                     "--mail-rcpt '~a'"
+                                     "--user ~a:~a"
+                                     "-F '=(;type=multipart/mixed'"
+                                     "-F '=~a;type=text/plain'"
+                                     ;; "-F 'file=@~a;type=~a;encoder=base64'"
+                                     "-F '=)'"
+                                     "-H \"Subject: ~a\""
+                                     "-H \"From: ~a <~a>\""
+                                     "-H \"To: ~a <~a>\"") " ")
+                      access-server
+                      access-port
+                      from-address
+                      to-address
+                      access-key
+                      access-secret
+                      (escape-str body)
+                      ;; attachments
+                      ;; file
+                      ;; "some-file.txt"
+                      ;; mime
+                      ;; "text/plain"
+                      subject
+                      from-name
+                      from-address
+                      to-name
+                      to-address)))
+    (display (format #f "\nsending mail to ~a\n" access-server))
+    (display cmd)))
 
 (define* (do-send-mail #:key task recipient pingwing-settings)
   (pingwing-send-mail #:access-key (assoc-ref (assoc-ref pingwing-settings
@@ -77,7 +92,7 @@
                                                                     "sender")
                                                          #\^))
                       #:to-name (car (string-split recipient #\^))
-                      #:to-address (car (string-split recipient #\^))
+                      #:to-address (cadr (string-split recipient #\^))
                       #:subject (assoc-ref task "subject")
                       #:body (assoc-ref task "body")))
 
@@ -89,29 +104,41 @@
                (app models task))
 
   (while #t
-    (let* ((oldest-task-not-done ($task 'get
-                                        #:ret 1
-                                        #:condition (where #:task_status
-                                                           "pending")
-                                        #:order-by "created_at ASC")))
-      (unless (nil? oldest-task-not-done)
-        (catch #t
-          (lambda ()
-            (display "
+         (let* ((oldest-task-not-done ($task 'get
+                                             #:ret 1
+                                             #:condition (where #:task_status
+                                                                "pending")
+                                             #:order-by "created_at ASC")))
+           (unless (nil? oldest-task-not-done)
+             (catch #t
+                    (lambda ()
+                      (display "
 ================
 processing pingwing task
 ")
-            (write oldest-task-not-done)
+                      (write oldest-task-not-done)
 
-            (for-each (lambda (recipient)
-                        (do-send-mail #:recipient recipient
-                                      #:pingwing-settings pingwing-settings
-                                      #:task (car oldest-task-not-done)))
-                      (string-split (assoc-ref (car
-                                                oldest-task-not-done)
-                                               "recipients") #\;)))
-          (lambda (key . args)
-            (display (format #f "\nerror processing task: ~a ~a" key
-                             args)))))
-      (sleep 3))))
+                      (for-each (lambda (recipient)
+                                  (do-send-mail #:recipient recipient
+                                                #:pingwing-settings
+                                                pingwing-settings
+                                                #:task (car
+                                                        oldest-task-not-done)))
+                                (string-split (assoc-ref (car
+                                                          oldest-task-not-done)
+                                                         "recipients") #\;))
+                      (let ((conn (get-conn-from-pool!)))
+                        (DB-query conn
+                                  (->sql update
+                                         'task set
+                                         `((task_status complete)
+                                           (updated_at ,(current-time)))
+                                         (where #:id (assoc-ref (car
+                                                                 oldest-task-not-done)
+                                                                "id"))))
+                        (DB-close conn)))
+                    (lambda (key . args)
+                      (display (format #f "\nerror processing task: ~a ~a" key
+                                       args)))))
+           (sleep 10))))
 
