@@ -27,39 +27,61 @@
      #:mime 'json
      (lambda (rc)
        (let* ((tasks ($task 'get
-                            #:order-by "created_at DESC")))
-         (:mime rc (scm->json-seq tasks)))))
+                            #:order-by "created_at DESC"))
+              (formatted-tasks (map (lambda (t)
+                                      `((id unquote
+                                            (assoc-ref t "id"))
+                                        (task-status unquote
+                                                     (assoc-ref t
+                                                                "task_status"))
+                                        (task-type unquote
+                                                   (assoc-ref t "task_type"))
+                                        (sender unquote
+                                                (unescape-str (assoc-ref t "sender")))
+                                        (subject unquote
+                                                 (unescape-str (assoc-ref t "subject")))
+                                        (recipients unquote
+                                                    (unescape-str (assoc-ref t "recipients")))
+                                        (body unquote
+                                              (unescape-str (assoc-ref t "body")))
+                                        (created-at unquote
+                                                    (assoc-ref t "created_at"))
+                                        (updated-at unquote
+                                                    (assoc-ref t "updated_at"))))
+                                    tasks)))
+         (:mime rc
+          (list->vector formatted-tasks)))))
 
 (post "/api/v1/tasks"
       #:mime 'json
       (lambda (rc)
         (catch #t
-          (lambda ()
-            (let* ((raw-b (bytevector->string (rc-body rc) "utf-8"))
-                   (b (json-string->scm raw-b))
-                   (uid (generate-string-uuid))
-                   (now (current-time))
-                   (message (format #f
-                                    "successfully saved task to pingwing system")))
-              ($task 'set
-                     #:id uid
-                     #:task_status 'pending
-                     #:task_type (assoc-ref b "task-type")
-                     #:sender (escape-str (assoc-ref b "sender"))
-                     #:subject (escape-str (assoc-ref b "subject"))
-                     #:recipients (escape-str (assoc-ref b "recipients"))
-                     #:body (escape-str (assoc-ref b "body"))
-                     #:created_at now)
-              (http-status 200
-                           (lambda ()
-                             (:mime rc
-                              `((message unquote message)))))))
-          (lambda (key . args)
-            (let* ((message (format #f
-                                    "error saving task in pingwing system: ~a ~a"
-                                    key args)))
-              (display message)
-              (http-status 500
-                           (lambda ()
-                             (:mime rc
-                              `((message unquote message))))))))))
+               (lambda ()
+                 (let* ((raw-b (bytevector->string (rc-body rc) "utf-8"))
+                        (b (json-string->scm raw-b))
+                        (uid (generate-string-uuid))
+                        (now (current-time))
+                        (message (format #f
+                                  "successfully saved task to pingwing system")))
+                   ($task 'set
+                          #:id uid
+                          #:task_status 'pending
+                          #:task_type (assoc-ref b "task-type")
+                          #:sender (escape-str (assoc-ref b "sender"))
+                          #:subject (escape-str (assoc-ref b "subject"))
+                          #:recipients (escape-str (assoc-ref b "recipients"))
+                          #:body (escape-str (assoc-ref b "body"))
+                          #:created_at now)
+                   (http-status 200
+                                (lambda ()
+                                  (:mime rc
+                                         `((message unquote message)))))))
+               (lambda (key . args)
+                 (let* ((message (format #f
+                                  "error saving task in pingwing system: ~a ~a"
+                                  key args)))
+                   (display message)
+                   (http-status 500
+                                (lambda ()
+                                  (:mime rc
+                                         `((message unquote message))))))))))
