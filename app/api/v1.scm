@@ -22,11 +22,6 @@
 (get "/api/v1/tasks"
      #:mime 'json
      (lambda (rc)
-       (define (do-get)
-         (:mime rc
-                ($ticket 'get
-                         #:condition (where #:project_id (params rc "project"))
-                         #:order-by '(human_id asc))))
        `()))
 
 (post "/api/v1/tasks"

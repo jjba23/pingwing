@@ -1,6 +1,7 @@
 (import (artanis mvc model))
 
 (create-artanis-model task
+                      (:deps)
                       (id char-field
                           (#:unique #:not-null #:maxlen 36))
                       (task_status char-field
