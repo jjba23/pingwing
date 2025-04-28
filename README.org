@@ -35,9 +35,9 @@ curl -v \
      -H "Content-Type: application/json" \
      -d '{
          "task-type": "send-email",
-         "sender": "No Reply - WikiMusic~~noreply@wikimusic.jointhefreeworld.org",
+         "sender": "No Reply - WikiMusic^noreply@wikimusic.jointhefreeworld.org",
          "subject": "Wikimusic - Password Reset",
-         "recipients": "Josep Bigorra~~jjbigorra@gmail.com;Josep Bigorra 1~~jjbigorra+1@gmail.com",
+         "recipients": "Josep Bigorra^jjbigorra@gmail.com;Josep Bigorra 1^jjbigorra+1@gmail.com",
          "body": "Some message that I want to send"
        }' \
      'http://localhost:50077/api/v1/tasks'

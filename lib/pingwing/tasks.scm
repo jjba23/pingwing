@@ -21,15 +21,15 @@
   #:use-module (ice-9 rdelim)
   #:use-module (ice-9 textual-ports)
   #:use-module (ice-9 regex)
-  #:use-module (app models task)
+  #:use-module (ice-9 iconv)
   #:use-module (srfi srfi-1)
+  #:use-module (ice-9 string-fun)
   #:use-module (artanis db)
   #:use-module (artanis ssql)
   #:use-module (srfi srfi-64)
   #:use-module (pingwing process)
   #:use-module (pingwing query-escape)
-  #:use-module (ice-9 string-fun)
-  #:use-module (ice-9 iconv))
+  #:use-module (app models task))
 
 ;; sesAccess='AKIAXXXXXXXXXXXXXXXX'
 ;; sesSecret='Bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'   
@@ -55,8 +55,31 @@
                              to-name
                              to-address
                              subject
-                             message)
-  (display (format #f "sending mail to ~a" access-server)))
+                             body)
+  (display (format #f "\nsending mail to ~a" access-server)))
+
+(define* (do-send-mail #:key task recipient pingwing-settings)
+  (pingwing-send-mail #:access-key (assoc-ref (assoc-ref pingwing-settings
+                                                         'mail)
+                                              'access-key)
+                      #:access-secret (assoc-ref (assoc-ref pingwing-settings
+                                                            'mail)
+                                                 'access-secret)
+                      #:access-server (assoc-ref (assoc-ref pingwing-settings
+                                                            'mail)
+                                                 'access-server)
+                      #:access-port (assoc-ref (assoc-ref pingwing-settings
+                                                          'mail)
+                                               'access-port)
+                      #:from-name (car (string-split (assoc-ref task "sender")
+                                                     #\^))
+                      #:from-address (cadr (string-split (assoc-ref task
+                                                                    "sender")
+                                                         #\^))
+                      #:to-name (car (string-split recipient #\^))
+                      #:to-address (car (string-split recipient #\^))
+                      #:subject (assoc-ref task "subject")
+                      #:body (assoc-ref task "body")))
 
 (define-public (pingwing-worker-thread pingwing-settings)
   (display (format #f "\n~a...\n"
@@ -66,37 +89,29 @@
                (app models task))
 
   (while #t
-         (let* ((oldest-task-not-done ($task 'get
-                                             #:ret 1
-                                             #:condition (where #:task_status
-                                                                "pending")
-                                             #:order-by "created_at ASC")))
-           (unless (nil? oldest-task-not-done)
-             (catch #t
-                    (lambda ()
-                      (display "
+    (let* ((oldest-task-not-done ($task 'get
+                                        #:ret 1
+                                        #:condition (where #:task_status
+                                                           "pending")
+                                        #:order-by "created_at ASC")))
+      (unless (nil? oldest-task-not-done)
+        (catch #t
+          (lambda ()
+            (display "
 ================
 processing pingwing task
 ")
-                      (display oldest-task-not-done)
-                      (pingwing-send-mail #:access-key (assoc-ref (assoc-ref
-                                                                   pingwing-settings
-                                                                   'mail)
-                                                                  'access-key)
-                                          #:access-secret (assoc-ref (assoc-ref
-                                                                      pingwing-settings
-                                                                      'mail)
-                                                                     'access-secret)
-                                          #:access-server (assoc-ref (assoc-ref
-                                                                      pingwing-settings
-                                                                      'mail)
-                                                                     'access-server)
-                                          #:access-port (assoc-ref (assoc-ref
-                                                                    pingwing-settings
-                                                                    'mail)
-                                                                   'access-port)))
-                    (lambda (key . args)
-                      (display (format #f "\nerror processing task: ~a ~a" key
-                                       args)))))
-           (sleep 3))))
+            (write oldest-task-not-done)
+
+            (for-each (lambda (recipient)
+                        (do-send-mail #:recipient recipient
+                                      #:pingwing-settings pingwing-settings
+                                      #:task (car oldest-task-not-done)))
+                      (string-split (assoc-ref (car
+                                                oldest-task-not-done)
+                                               "recipients") #\;)))
+          (lambda (key . args)
+            (display (format #f "\nerror processing task: ~a ~a" key
+                             args)))))
+      (sleep 3))))
 
