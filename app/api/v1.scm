@@ -17,15 +17,42 @@
 
 (define-restful-api v1)
 
-(import (app models task))
+(import (uuid generate))
+(import (app models task)
+        (pingwing query-escape))
 
 (get "/api/v1/tasks"
      #:mime 'json
      (lambda (rc)
-       (:mime rc `())))
+       (let* ((tasks ($task 'get
+                            #:order-by "created_at DESC")))
+         (:mime rc tasks))))
 
 (post "/api/v1/tasks"
       #:mime 'json
       #:from-post 'json
       (lambda (rc)
-        (:mime rc `((message . "submitted task to pingwing system successfully")))))
+        (catch #t
+               (lambda ()
+                 (let* ((b (:from-post rc
+                                       'get))
+                        (uid (generate-string-uuid))
+                        (now (current-time)))
+                   ($task 'set
+                          #:id uid
+                          #:task_status 'pending
+                          #:task_type (assoc-ref b "task-type")
+                          #:sender (escape-str (assoc-ref b "sender"))
+                          #:subject (escape-str (assoc-ref b "subject"))
+                          #:recipients (escape-str (assoc-ref b "recipients"))
+                          #:body (escape-str (assoc-ref b "body"))
+                          #:created_at now)))
+               (lambda (key . args)
+                 (let* ((message (format #f
+                                  "error saving task in pingwing system: ~a ~a"
+                                  key args)))
+                   (display message)
+                   (http-status 500
+                                (lambda ()
+                                  (:mime rc
+                                         `((message unquote message))))))))))

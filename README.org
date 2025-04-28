@@ -9,3 +9,25 @@
 
 /Notification and E-Mail service for the jointhefreeworld platform/
 
+** Usage
+
+Retrieve tasks from the database.
+
+#+begin_src shell
+curl -v 'http://localhost:50077/api/v1/tasks'
+#+end_src
+
+Submit a task
+
+#+begin_src shell
+curl -v -X POST \
+     -H "Content-Type: application/json" \
+     -d '{
+         "task_type": "send-email",
+         "sender": "noreply@wikimusic.jointhefreeworld.org",
+         "subject": "Wikimusic - Password Reset",
+         "recipients": "jjbigorra@gmail.com,jjbigorra+1@gmail.com",
+         "body": "Some message that I want to send"
+       }' \
+     'http://localhost:50077/api/v1/tasks'
+#+end_src
