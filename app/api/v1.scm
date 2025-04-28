@@ -22,10 +22,10 @@
 (get "/api/v1/tasks"
      #:mime 'json
      (lambda (rc)
-       `()))
+       (:mime rc `())))
 
 (post "/api/v1/tasks"
       #:mime 'json
       #:from-post 'json
       (lambda (rc)
-        `((message . "submitted task to pingwing system successfully"))))
+        (:mime rc `((message . "submitted task to pingwing system successfully")))))
