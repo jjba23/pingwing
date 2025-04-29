@@ -52,6 +52,7 @@
                                      "--user ~a:~a"
                                      "-F '=(;type=multipart/alternative'"
                                      "-F '=~a'"
+                                     ;;"--form-string '= ~a;type=text/html'"
                                      "-F '= ~a;type=text/html'"
                                      "-F '=)'"
                                      ;; "-F 'file=@~a;type=~a;encoder=base64'"
