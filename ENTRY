@@ -40,7 +40,8 @@
   `((mail (access-key unquote pingwing-mail-access-key)
           (access-secret unquote pingwing-mail-access-secret)
           (access-server unquote pingwing-mail-access-server)
-          (access-port unquote pingwing-mail-access-port))))
+          (access-port unquote pingwing-mail-access-port))
+    (pingwing (worker-sleep-seconds . 10))))
 
 ;; Store the thread object belonging to the pingwing queue worker
 (define worker-thread
@@ -55,7 +56,7 @@
     (set! worker-thread t)))
 
 ;; Add hook on before running the Artanis application to start the queue worker
-;;(run-before-run! start-worker)
+(run-before-run! start-worker)
 
 ;; Procedure to stop the pingwing queue worker
 (define (cancel-worker)

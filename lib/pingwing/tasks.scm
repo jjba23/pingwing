@@ -24,6 +24,7 @@
   #:use-module (ice-9 iconv)
   #:use-module (srfi srfi-1)
   #:use-module (ice-9 string-fun)
+  #:use-module (json)
   #:use-module (artanis db)
   #:use-module (artanis ssql)
   #:use-module (srfi srfi-64)
@@ -61,7 +62,7 @@
                       to-address
                       access-key
                       access-secret
-                      (escape-str body)
+                      body
                       (escape-str body-html)
                       ;; attachments
                       ;; file
@@ -89,37 +90,39 @@
                       #:access-port (assoc-ref (assoc-ref pingwing-settings
                                                           'mail)
                                                'access-port)
-                      #:from-name (car (string-split (assoc-ref task "sender")
-                                                     #\^))
-                      #:from-address (cadr (string-split (assoc-ref task
-                                                                    "sender")
-                                                         #\^))
+                      #:from-name (unescape-str (assoc-ref task "sender_name"))
+                      #:from-address (unescape-str (assoc-ref task
+                                                              "sender_address"))
                       #:to-name (car (string-split recipient #\^))
                       #:to-address (cadr (string-split recipient #\^))
                       #:subject (assoc-ref task "subject")
                       #:body (assoc-ref task "body")
                       #:body-html "<h1>PRETTY</h1>"))
 
-(define* (task-processor)
+(define (log-separator)
+  (display "\n\n========================\n"))
+
+(define (log-info msg)
+  (display (format #f ">>= ~a" msg)))
+
+(define* (pingwing-task-processor #:key task pingwing-settings)
   (let ((conn (get-conn-from-pool!)))
-    (display "
-========================
-processing pingwing task
-")
-    (write oldest-task-not-done)
+    (log-separator)
+    (log-info "processing pingwing task")
 
     (for-each (lambda (recipient)
                 (do-send-mail #:recipient recipient
                               #:pingwing-settings pingwing-settings
-                              #:task (car oldest-task-not-done)))
-              (string-split (assoc-ref (car oldest-task-not-done) "recipients")
-                            #\;))
+                              #:task task))
+              (vector->list (json-string->scm (unescape-str (assoc-ref
+                                                             task
+                                                             "recipients")))))
     (DB-query conn
               (->sql update
                      'task set
                      `((task_status complete)
                        (updated_at ,(current-time)))
-                     (where #:id (assoc-ref (car oldest-task-not-done) "id"))))
+                     (where #:id (assoc-ref task "id"))))
     (DB-close conn)))
 
 (define-public (pingwing-worker-thread pingwing-settings)
@@ -130,16 +133,24 @@ processing pingwing task
                (app models task))
 
   (while #t
-         (let* ((oldest-task-not-done ($task 'get
-                                             #:ret 1
-                                             #:condition (where #:task_status
-                                                                "pending")
-                                             #:order-by "created_at ASC"))
-                (exception-handler (lambda (key . args)
-                                     (display (format #f
-                                               "\nerror processing task: ~a ~a"
-                                               key args)))))
-           (unless (nil? oldest-task-not-done)
-             (catch #t task-processor exception-handler))
-           (sleep 5))))
+    (let* ((next-task ($task 'get
+                             #:ret 1
+                             #:condition (where #:task_status
+                                                "pending")
+                             #:order-by "created_at ASC"))
+           (exception-handler (lambda (key . args)
+                                (display (format #f
+                                                 "\nerror processing task: ~a ~a"
+                                                 key args)))))
+      (when (eq? (length next-task) 1)
+        (catch #t
+          (lambda ()
+            (pingwing-task-processor #:task (car next-task)
+                                     #:pingwing-settings
+                                     pingwing-settings))
+          exception-handler))
+      
+      (sleep (assoc-ref (assoc-ref pingwing-settings
+                                   'pingwing)
+                        'worker-sleep-seconds)))))
 
