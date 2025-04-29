@@ -48,11 +48,11 @@
                    (em ,(gettext
                          "this e-mail was powered by pingwing - the free and open Lisp-powered notification nexus"))
                    (a (@ (href "https://codeberg.org/jjba23/pingwing"))
-                      (button ,(gettext "see pingwing's source code on Codeberg"))))))
+                      (button ,(gettext
+                                "see pingwing's source code on Codeberg"))))))
       (with-output-to-string (lambda ()
                                (sxml->xml tree)))))
   (export password-reset-html-template))
-
 
 (begin
   (define* (password-reset-plain-template #:key system-name user reset-link)

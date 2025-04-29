@@ -64,7 +64,7 @@
                       access-key
                       access-secret
                       (escape-plain body)
-                      (escape-str body-html)
+                      (escape-plain body-html)
                       ;; attachments
                       ;; file
                       ;; "some-file.txt"
@@ -75,7 +75,8 @@
                       from-address
                       to-name
                       to-address)))
-    (display (format #f "\nsending mail to ~a\n" access-server))
+    (log-separator)
+    (log-info (format #f "sending mail to ~a\n" access-server))
     (display cmd)))
 
 (define* (do-send-mail #:key task recipient pingwing-settings)
@@ -93,16 +94,18 @@
                                                'access-port)
                       #:from-name (unescape-str (assoc-ref task "sender_name"))
                       #:from-address (unescape-str (assoc-ref task
-                                                              "sender_address"))
+                                                    "sender_address"))
                       #:to-name (car (string-split recipient #\^))
                       #:to-address (cadr (string-split recipient #\^))
                       #:subject (assoc-ref task "subject")
-                      #:body (password-reset-plain-template #:system-name "wikimusic"
-                                                            #:user "jjbigorra@gmail.com"
-                                                            #:reset-link "https://gnu.org")
-                      #:body-html (password-reset-html-template #:system-name "wikimusic"
-                                                                #:user "jjbigorra@gmail.com"
-                                                                #:reset-link "https://gnu.org")))
+                      #:body (password-reset-plain-template #:system-name
+                              "wikimusic"
+                              #:user "jjbigorra@gmail.com"
+                              #:reset-link "https://gnu.org")
+                      #:body-html (password-reset-html-template #:system-name
+                                   "wikimusic"
+                                   #:user "jjbigorra@gmail.com"
+                                   #:reset-link "https://gnu.org")))
 
 (define (log-separator)
   (display "\n========================"))
