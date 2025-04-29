@@ -42,8 +42,7 @@
                            (sender-name . "No Reply - WikiMusic")
                            (sender-address . "noreply@wikimusic.jointhefreeworld.org")
                            (subject . "WikiMusic - Password Reset")
-                           (recipients . (((name . "Josep Bigorra")(address . "jjbigorra@gmail.com"))
-                                          ((name . "Someone else")(address . "jjbigorra+1@gmail.com"))))))
+                           (recipients . (((name . "Josep Bigorra")(address . "jjbigorra@gmail.com"))))))
       :headers '(("Content-Type" . "application/json"))
       :parser 'json-read
       :success (cl-function
