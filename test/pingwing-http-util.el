@@ -23,10 +23,10 @@
                   (message "Done: %s" (request-response-status-code response))
                   (sss-new-buffer-with-json (format "pingwing-http-util-%s" (sss-uuidgen-string))
                                             (request-response-data response))))
-      :error (lambda (&key error &allow-other-keys)
-               (message "Error: %s" error)))))
+      :error (cl-function (lambda (&key error &allow-other-keys)
+                            (message "Error: %s" error))))))
 
-(pingwing-get-tasks)
+;;(pingwing-get-tasks)
 
 (defun pingwing-create-task ()
   "Create a simple task in pingwing."
@@ -42,8 +42,8 @@
                            (sender-name . "No Reply - WikiMusic")
                            (sender-address . "noreply@wikimusic.jointhefreeworld.org")
                            (subject . "WikiMusic - Password Reset")
-                           (recipients . ("Josep Bigorra^jjbigorra@gmail.com"
-                                          "Another Joe^jjbigorra+1@gmail.com"))))
+                           (recipients . (((name . "Josep Bigorra")(address . "jjbigorra@gmail.com"))
+                                          ((name . "Someone else")(address . "jjbigorra+1@gmail.com"))))))
       :headers '(("Content-Type" . "application/json"))
       :parser 'json-read
       :success (cl-function
@@ -51,10 +51,10 @@
                   (message "Done: %s" (request-response-status-code response))
                   (sss-new-buffer-with-json (format "pingwing-http-util-%s" (sss-uuidgen-string))
                                             (json-encode (request-response-data response)))))
-      :error (lambda (&key error &allow-other-keys)
-               (message "Error: %s" error)))))
+      :error (cl-function (lambda (&key error &allow-other-keys)
+                            (message "Error: %s" error))))))
 
-(pingwing-create-task)
+;;(pingwing-create-task)
 
 (provide 'pingwing-http-util)
 

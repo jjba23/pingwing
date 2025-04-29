@@ -63,8 +63,8 @@ curl -v \
          "sender-address": "noreply@wikimusic.jointhefreeworld.org",
          "subject": "Wikimusic - Password Reset",
          "recipients": [
-           "Josep Bigorra^jjbigorra@gmail.com",
-           "Another Joe^jjbigorra+1@gmail.com"
+           {"name": "Josep Bigorra", "address": "jjbigorra@gmail.com"},
+           {"name": "Another Person", "address": "jjbigorra+1@gmail.com"}
          ]
        }' \
      'http://localhost:50077/api/v1/tasks'

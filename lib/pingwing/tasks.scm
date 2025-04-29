@@ -52,7 +52,7 @@
                                      "--user ~a:~a"
                                      "-F '=(;type=multipart/alternative'"
                                      "-F '=~a'"
-                                     ;;"--form-string '= ~a;type=text/html'"
+                                     ;; "--form-string '= ~a;type=text/html'"
                                      "-F '= ~a;type=text/html'"
                                      "-F '=)'"
                                      ;; "-F 'file=@~a;type=~a;encoder=base64'"
@@ -89,7 +89,7 @@
                                                                      v
                                                                      "system-name")
                                                       #:user (assoc-ref v
-                                                                        "user")
+                                                              "user")
                                                       #:reset-link (assoc-ref
                                                                     v
                                                                     "reset-link")))
@@ -104,8 +104,7 @@
                                                                     "system-name")
                                                      #:user (assoc-ref v
                                                                        "user")
-                                                     #:reset-link (assoc-ref
-                                                                   v
+                                                     #:reset-link (assoc-ref v
                                                                    "reset-link")))
       (_ #f))))
 
@@ -125,8 +124,8 @@
                       #:from-name (unescape-str (assoc-ref task "sender_name"))
                       #:from-address (unescape-str (assoc-ref task
                                                               "sender_address"))
-                      #:to-name (car (string-split recipient #\^))
-                      #:to-address (cadr (string-split recipient #\^))
+                      #:to-name (assoc-ref recipient "name")
+                      #:to-address (assoc-ref recipient "address")
                       #:subject (assoc-ref task "subject")
                       #:body (body-from-task #:task task)
                       #:body-html (html-body-from-task #:task task)))
@@ -164,23 +163,24 @@
                (app models task))
 
   (while #t
-         (let* ((next-task ($task 'get
-                                  #:ret 1
-                                  #:condition (where #:task_status "pending")
-                                  #:order-by "created_at ASC"))
-                (exception-handler (lambda (key . args)
-                                     (display (format #f
-                                               "\nerror processing task: ~a ~a"
-                                               key args)))))
-           (when (eq? (length next-task) 1)
-             (catch #t
-                    (lambda ()
-                      (pingwing-task-processor #:task (car next-task)
-                                               #:pingwing-settings
-                                               pingwing-settings))
-                    exception-handler))
+    (let* ((next-task ($task 'get
+                             #:ret 1
+                             #:condition (where #:task_status "pending")
+                             #:order-by "created_at ASC"))
+           (exception-handler (lambda (key . args)
+                                (display (format #f
+                                                 "\nerror processing task: ~a ~a"
+                                                 key args)))))
+      (when (eq? (length next-task) 1)
+        (catch #t
+          (lambda ()
+            (pingwing-task-processor #:task (car next-task)
+                                     #:pingwing-settings
+                                     pingwing-settings))
+          exception-handler))
 
-           (sleep (assoc-ref (assoc-ref pingwing-settings
-                                        'pingwing)
-                             'worker-sleep-seconds)))))
+      (sleep (assoc-ref (assoc-ref pingwing-settings
+                                   'pingwing)
+                        'worker-sleep-seconds)))))
+
 

@@ -23,6 +23,8 @@
   #:use-module (ice-9 iconv))
 
 (define-public (->inline-css xs)
-  (string-join (map (lambda(x) (format #f "~a: ~a;" (car x) (cdr x))) xs) " "))
-
+  (string-join (map (lambda (x)
+                      (format #f "~a: ~a;"
+                              (car x)
+                              (cdr x))) xs) " "))
 
