@@ -47,15 +47,36 @@
                              subject
                              body
                              body-html)
-
   
   (let* ((unico (format #f "~a-~a-~a" id from-address to-address))
-         (html-file (format #f "tmp/~a.html" unico))
-         (text-file (format #f "tmp/~a.txt" unico))
-         (_ (with-output-to-file html-file
-              (lambda() (display body-html))))
-         (_ (with-output-to-file text-file
-              (lambda() (display body))))
+         (the-file (format #f "tmp/~a" unico))
+         (_ (with-output-to-file the-file
+              (lambda ()
+                (display (string-join `("MIME-Version: 1.0" ,(format #f
+                                                              "Subject: ~a"
+                                                              subject)
+                                        ,(format #f "From: ~a <~a>" from-name
+                                                 from-address)
+                                        ,(format #f "To: ~a <~a>" to-name
+                                                 to-address)
+                                        ;; TODO reply-to, cc, bcc
+                                        "Content-Type: multipart/alternative; boundary=\"00000000000067dfe705d9d0ff7a\""
+                                        ""
+                                        "--00000000000067dfe705d9d0ff7a"
+                                        "Content-Type: text/plain; charset=\"UTF-8\""
+                                        "Content-Transfer-Encoding: quoted-printable"
+                                        ""
+                                        ,body
+                                        ""
+                                        "--00000000000067dfe705d9d0ff7a"
+                                        "Content-Type: text/html; charset=\"UTF-8\""
+                                        "Content-Transfer-Encoding: quoted-printable"
+                                        ""
+                                        "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">"
+                                        ,body-html
+                                        ""
+                                        "--00000000000067dfe705d9d0ff7a--")
+                                      "\n")))))
          (cmd (format #f
                       (string-join '("curl --verbose --ssl-reqd"
                                      "--url smtp://~a:~a"
@@ -63,16 +84,7 @@
                                      "--mail-from '~a'"
                                      "--mail-rcpt '~a'"
                                      "--mail-rcpt-allowfails"
-                                     ;; headers
-                                     "-H \"From: \\\"~a\\\" <~a>\""
-                                     "-H \"To: \\\"~a\\\" <~a>\""
-                                     "-H \"Subject: \\\"~a\\\" \""
-                                     ;; "-H \"Reply-To: ~a\""
-                                     ;; form
-                                     "-F '=(;type=multipart/alternative'"
-                                     "-F \"=<~a;encoder=quoted-printable\""
-                                     "-F \"=<~a;encoder=quoted-printable\""
-                                     "-F '=)'") " ")
+                                     "--upload-file ~a") " ")
                       access-server
                       access-port
                       access-key
@@ -80,22 +92,16 @@
 
                       from-address
                       to-address
-                      from-name
-                      from-address
-                      to-name
-                      to-address
-                      subject
 
-                      html-file
-                      text-file
+                      the-file
 
                       )))
     (log-separator)
     (log-info (format #f "sending mail to ~a\n" access-server))
     (display cmd)
-    (catch #t (lambda() (delete-file html-file)) (lambda(key . args) '()))
-    (catch #t (lambda() (delete-file text-file)) (lambda(key . args) '()))))
-
+    ;; (catch #t (lambda() (delete-file html-file)) (lambda(key . args) '()))
+    ;; (catch #t (lambda() (delete-file text-file)) (lambda(key . args) '()))
+    ))
 
 (define* (body-from-task #:key task)
   (display (string->symbol (assoc-ref task "template")))
@@ -105,7 +111,7 @@
                                                                      v
                                                                      "system-name")
                                                       #:user (assoc-ref v
-                                                                        "user")
+                                                              "user")
                                                       #:reset-link (assoc-ref
                                                                     v
                                                                     "reset-link")))
@@ -140,7 +146,7 @@
                                                'access-port)
                       #:from-name (unescape-str (assoc-ref task "sender_name"))
                       #:from-address (unescape-str (assoc-ref task
-                                                              "sender_address"))
+                                                    "sender_address"))
                       #:to-name (assoc-ref recipient "name")
                       #:to-address (assoc-ref recipient "address")
                       #:subject (assoc-ref task "subject")
@@ -162,7 +168,7 @@
                               #:pingwing-settings pingwing-settings
                               #:task task))
               (vector->list (json-string->scm (unescape-str (assoc-ref task
-                                                                       "recipients")))))
+                                                             "recipients")))))
     (DB-query conn
               (->sql update
                      'task set

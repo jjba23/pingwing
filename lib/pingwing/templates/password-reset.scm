@@ -30,32 +30,35 @@
 
 (begin
   (define* (password-reset-html-template #:key system-name user reset-link)
-    (let* ((tree `((h1 (span ,(gettext "Reset your password: "))
-                       (span ,system-name))
-                   (p ,(gettext
-                        "We have received a request to reset the password for your user account:"))
-                   (dl (@ (style ,(->inline-css '((padding . "1.2em")
-                                                  (border-radius . "0.6em")
-                                                  (margin-top . "0.6em")
-                                                  (margin-bottom . "0.6em")))))
-                       (dt ,(gettext "User:"))
-                       (dd ,user))
-                   (span "")
-                   (a (@ (href ,reset-link))
-                      (button ,(gettext "🔗 Reset your password on ")
-                              ,system-name))
-                   (hr)
-                   (p ,(gettext
-                        "Feel free to ignore this e-mail if you did not request it."))
-                   (p ,(gettext
-                        "If you had trouble clicking that link, please manually copy paste it:"))
-                   (p ,reset-link)
-                   (hr)
-                   (p (em ,(gettext
-                            "this e-mail was powered by pingwing - the free and open Lisp-powered notification nexus")))
-                   (a (@ (href "https://codeberg.org/jjba23/pingwing"))
-                      (button ,(gettext
-                                "see pingwing's source code on Codeberg"))))))
+    (let* ((tree `((html (body (div (h1 (span ,(gettext
+                                                "Reset your password: "))
+                                        (span ,system-name))
+                                    (p ,(gettext
+                                         "We have received a request to reset the password for your user account:"))
+                                    (dl (@ (style ,(->inline-css '((padding . "1.2em")
+                                                                   (border-radius . "0.6em")
+                                                                   (margin-top . "0.6em")
+                                                                   (margin-bottom . "0.6em")))))
+                                        (dt ,(gettext "User:"))
+                                        (dd ,user))
+                                    (span "")
+                                    (a (@ (href ,reset-link))
+                                       (button ,(gettext
+                                                 "🔗 Reset your password on ")
+                                               ,system-name))
+                                    (hr)
+                                    (p ,(gettext
+                                         "Feel free to ignore this e-mail if you did not request it."))
+                                    (p ,(gettext
+                                         "If you had trouble clicking that link, please manually copy paste it:"))
+                                    (p ,reset-link)
+                                    (hr)
+                                    (p (em ,(gettext
+                                             "this e-mail was powered by pingwing - the free and open Lisp-powered notification nexus")))
+                                    (a (@ (href
+                                           "https://codeberg.org/jjba23/pingwing"))
+                                       (button ,(gettext
+                                                 "see pingwing's source code on Codeberg")))))))))
       (with-output-to-string (lambda ()
                                (sxml->xml tree)))))
   (export password-reset-html-template))
