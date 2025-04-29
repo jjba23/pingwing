@@ -30,7 +30,8 @@
 
 (begin
   (define* (escape-plain str)
-    (escape-str str #:dict escape-plain-alist))
+    (escape-str str
+                #:dict escape-plain-alist))
   (export escape-plain))
 
 (begin
@@ -42,8 +43,7 @@
                 (set! result
                       (string-replace-substring result
                                                 (car p)
-                                                (car (cdr p))))) dict)
-    result)
+                                                (car (cdr p))))) dict) result)
   (export escape-str))
 
 (begin
@@ -55,7 +55,6 @@
                 (set! result
                       (string-replace-substring result
                                                 (car (cdr p))
-                                                (car p)))) dict)
-    result)
+                                                (car p)))) dict) result)
   (export unescape-str))
 

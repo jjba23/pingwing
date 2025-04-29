@@ -22,6 +22,7 @@
   #:use-module (ice-9 textual-ports)
   #:use-module (ice-9 regex)
   #:use-module (ice-9 iconv)
+  #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
   #:use-module (ice-9 string-fun)
   #:use-module (json)
@@ -79,6 +80,34 @@
     (log-info (format #f "sending mail to ~a\n" access-server))
     (display cmd)))
 
+(define* (body-from-task #:key task)
+  (display (string->symbol (assoc-ref task "template")))
+  (let* ((v (json-string->scm (unescape-str (assoc-ref task "template_vars")))))
+    (match (string->symbol (assoc-ref task "template"))
+      ('password-reset (password-reset-plain-template #:system-name (assoc-ref
+                                                                     v
+                                                                     "system-name")
+                                                      #:user (assoc-ref v
+                                                                        "user")
+                                                      #:reset-link (assoc-ref
+                                                                    v
+                                                                    "reset-link")))
+      (_ #f))))
+
+(define* (html-body-from-task #:key task)
+  (display (string->symbol (assoc-ref task "template")))
+  (let* ((v (json-string->scm (unescape-str (assoc-ref task "template_vars")))))
+    (match (string->symbol (assoc-ref task "template"))
+      ('password-reset (password-reset-html-template #:system-name (assoc-ref
+                                                                    v
+                                                                    "system-name")
+                                                     #:user (assoc-ref v
+                                                                       "user")
+                                                     #:reset-link (assoc-ref
+                                                                   v
+                                                                   "reset-link")))
+      (_ #f))))
+
 (define* (do-send-mail #:key task recipient pingwing-settings)
   (pingwing-send-mail #:access-key (assoc-ref (assoc-ref pingwing-settings
                                                          'mail)
@@ -94,18 +123,12 @@
                                                'access-port)
                       #:from-name (unescape-str (assoc-ref task "sender_name"))
                       #:from-address (unescape-str (assoc-ref task
-                                                    "sender_address"))
+                                                              "sender_address"))
                       #:to-name (car (string-split recipient #\^))
                       #:to-address (cadr (string-split recipient #\^))
                       #:subject (assoc-ref task "subject")
-                      #:body (password-reset-plain-template #:system-name
-                              "wikimusic"
-                              #:user "jjbigorra@gmail.com"
-                              #:reset-link "https://gnu.org")
-                      #:body-html (password-reset-html-template #:system-name
-                                   "wikimusic"
-                                   #:user "jjbigorra@gmail.com"
-                                   #:reset-link "https://gnu.org")))
+                      #:body (body-from-task #:task task)
+                      #:body-html (html-body-from-task #:task task)))
 
 (define (log-separator)
   (display "\n========================"))

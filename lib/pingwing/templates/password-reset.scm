@@ -35,6 +35,7 @@
                         "We have received a request to reset the password for your user account:"))
                    (dl (dt ,(gettext "User:"))
                        (dd ,user))
+                   (span "")
                    (a (@ (href ,reset-link))
                       (button ,(gettext "Go reset your password on ")
                               ,system-name))
@@ -45,8 +46,8 @@
                         "If you had trouble clicking that link, please manually copy paste it:"))
                    (p ,reset-link)
                    (hr)
-                   (em ,(gettext
-                         "this e-mail was powered by pingwing - the free and open Lisp-powered notification nexus"))
+                   (p (em ,(gettext
+                            "this e-mail was powered by pingwing - the free and open Lisp-powered notification nexus")))
                    (a (@ (href "https://codeberg.org/jjba23/pingwing"))
                       (button ,(gettext
                                 "see pingwing's source code on Codeberg"))))))
