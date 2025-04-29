@@ -25,15 +25,6 @@
   '(("'" "&apos;")
     ("\"" "&quot;")))
 
-(define escape-plain-alist
-  '(("'" "‘")))
-
-(begin
-  (define* (escape-plain str)
-    (escape-str str
-                #:dict escape-plain-alist))
-  (export escape-plain))
-
 (begin
   (define* (escape-str str
                        #:key (dict escape-alist))

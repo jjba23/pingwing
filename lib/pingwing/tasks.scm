@@ -34,7 +34,8 @@
   #:use-module (pingwing query-escape)
   #:use-module (app models task))
 
-(define* (pingwing-send-mail #:key access-key
+(define* (pingwing-send-mail #:key id
+                             access-key
                              access-secret
                              access-server
                              access-port
@@ -45,38 +46,48 @@
                              subject
                              body
                              body-html)
-  (let* ((cmd (format #f
-                      (string-join '("curl -v --url smtp://~a:~a" "--ssl-reqd"
+
+  
+  (let* ((html-file (format #f "tmp/~a/~a-~a-body.html" id from-address to-address))
+         (text-file (format #f "tmp/~a/~a-~a-body.txt" id from-address to-address))
+         (_ (with-output-to-file html-file
+              (lambda() (display body-html))))
+         (_ (with-output-to-file text-file
+              (lambda() (display body))))
+         (cmd (format #f
+                      (string-join '("curl --verbose --ssl-reqd"
+                                     "--url smtp://~a:~a"
+                                     "--user \"~a:~a\""
                                      "--mail-from '~a'"
                                      "--mail-rcpt '~a'"
-                                     "--user ~a:~a"
-                                     "-F '=(;type=multipart/alternative'"
-                                     "-F '=~a'"
-                                     ;; "--form-string '= ~a;type=text/html'"
-                                     "-F '= ~a;type=text/html'"
-                                     "-F '=)'"
-                                     ;; "-F 'file=@~a;type=~a;encoder=base64'"
+                                     "--mail-rcpt-allowfails"
+                                     ;; headers
+                                     "-H \"From: \"~a\" <~a>\""
+                                     "-H \"To: \"~a\" <~a>\""
                                      "-H \"Subject: ~a\""
-                                     "-H \"From: ~a <~a>\""
-                                     "-H \"To: ~a <~a>\"") " ")
+                                     ;; "-H \"Reply-To: ~a\""
+                                     ;; form
+                                     "-F '=(;type=multipart/alternative'"
+                                     "-F \"=<~a;encoder=quoted-printable\""
+                                     "-F \"=<~a;encoder=quoted-printable\""
+                                     "-F '=)'") " ")
                       access-server
                       access-port
-                      from-address
-                      to-address
                       access-key
                       access-secret
-                      (escape-plain body)
-                      (escape-plain body-html)
-                      ;; attachments
-                      ;; file
-                      ;; "some-file.txt"
-                      ;; mime
-                      ;; "text/plain"
-                      subject
+
+                      from-address
+                      to-address
                       from-name
                       from-address
                       to-name
-                      to-address)))
+                      to-address
+                      subject
+
+                      html-file
+                      text-file
+
+                      )))
     (log-separator)
     (log-info (format #f "sending mail to ~a\n" access-server))
     (display cmd)))
@@ -109,7 +120,8 @@
       (_ #f))))
 
 (define* (do-send-mail #:key task recipient pingwing-settings)
-  (pingwing-send-mail #:access-key (assoc-ref (assoc-ref pingwing-settings
+  (pingwing-send-mail #:id (assoc-ref task "id")
+                      #:access-key (assoc-ref (assoc-ref pingwing-settings
                                                          'mail)
                                               'access-key)
                       #:access-secret (assoc-ref (assoc-ref pingwing-settings
@@ -140,7 +152,12 @@
   (let ((conn (get-conn-from-pool!)))
     (log-separator)
     (log-info (gettext "processing pingwing task"))
-
+    (catch #t
+           (lambda ()
+             (mkdir (format #f "tmp/~a"
+                            (assoc-ref task "id"))))
+           (lambda (key . args)
+             '()))
     (for-each (lambda (recipient)
                 (do-send-mail #:recipient recipient
                               #:pingwing-settings pingwing-settings
@@ -162,25 +179,30 @@
   (use-modules (pingwing tasks)
                (app models task))
 
+  (catch #t
+         (lambda ()
+           (mkdir "tmp"))
+         (lambda (key . args)
+           '()))
+
   (while #t
-    (let* ((next-task ($task 'get
-                             #:ret 1
-                             #:condition (where #:task_status "pending")
-                             #:order-by "created_at ASC"))
-           (exception-handler (lambda (key . args)
-                                (display (format #f
-                                                 "\nerror processing task: ~a ~a"
-                                                 key args)))))
-      (when (eq? (length next-task) 1)
-        (catch #t
-          (lambda ()
-            (pingwing-task-processor #:task (car next-task)
-                                     #:pingwing-settings
-                                     pingwing-settings))
-          exception-handler))
+         (let* ((next-task ($task 'get
+                                  #:ret 1
+                                  #:condition (where #:task_status "pending")
+                                  #:order-by "created_at ASC"))
+                (exception-handler (lambda (key . args)
+                                     (display (format #f
+                                               "\nerror processing task: ~a ~a"
+                                               key args)))))
+           (when (eq? (length next-task) 1)
+             (catch #t
+                    (lambda ()
+                      (pingwing-task-processor #:task (car next-task)
+                                               #:pingwing-settings
+                                               pingwing-settings))
+                    exception-handler))
 
-      (sleep (assoc-ref (assoc-ref pingwing-settings
-                                   'pingwing)
-                        'worker-sleep-seconds)))))
-
+           (sleep (assoc-ref (assoc-ref pingwing-settings
+                                        'pingwing)
+                             'worker-sleep-seconds)))))
 
