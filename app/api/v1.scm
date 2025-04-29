@@ -42,9 +42,10 @@
                                                   (unescape-str (assoc-ref t
                                                                  "template")))
                                         (template-vars unquote
-                                                       (unescape-str (assoc-ref
-                                                                      t
-                                                                      "template_vars")))
+                                                       (json-string->scm (unescape-str
+                                                                          (assoc-ref
+                                                                           t
+                                                                           "template_vars"))))
                                         (sender-name unquote
                                                      (unescape-str (assoc-ref
                                                                     t
@@ -57,11 +58,10 @@
                                                  (unescape-str (assoc-ref t
                                                                 "subject")))
                                         (recipients unquote
-                                                    (string-split (unescape-str
-                                                                   (assoc-ref
-                                                                    t
-                                                                    "recipients"))
-                                                                  #\;))
+                                                    (json-string->scm (unescape-str
+                                                                       (assoc-ref
+                                                                        t
+                                                                        "recipients"))))
                                         (created-at unquote
                                                     (assoc-ref t "created_at"))
                                         (updated-at unquote
