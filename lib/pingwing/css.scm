@@ -15,14 +15,34 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with pingwing.  If not, see <https://www.gnu.org/licenses/>.
 
-(define-module (pingwing inline-css)
+(define-module (pingwing css)
   #:use-module (ice-9 textual-ports)
   #:use-module (ice-9 time)
   #:use-module (ice-9 format)
   #:use-module (ice-9 string-fun)
   #:use-module (ice-9 iconv))
 
-(define-public (->inline-css xs)
+;; Create a CSS configuration from PAIRS, a selector to values alist.
+(begin
+  (define* (mk-kv-conf-lines pairs
+                             #:key (template "~a=~a\n"))
+    (with-output-to-string (lambda ()
+                             (for-each (lambda (x)
+                                         (display (format #f template
+                                                          (car x)
+                                                          (cdr x)))) pairs))))
+  
+  (define* (mk-css-conf-lines pairs)
+    (with-output-to-string (lambda ()
+                             (for-each (lambda (x)
+                                         (display (format #f "~a {\n"
+                                                          (car x)))
+                                         (display (mk-kv-conf-lines (cdr x)
+                                                                    #:template "  ~a: ~a;\n"))
+                                         (display "}\n\n")) pairs))))
+  (export mk-css-conf-lines))
+
+(define-public (->style xs)
   (string-join (map (lambda (x)
                       (format #f "~a: ~a;"
                               (car x)

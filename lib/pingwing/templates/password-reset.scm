@@ -23,22 +23,26 @@
   #:use-module (ice-9 regex)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-64)
-  #:use-module (pingwing inline-css)
+  #:use-module (pingwing css)
   #:use-module (ice-9 string-fun)
   #:use-module (sxml simple)
   #:use-module (ice-9 iconv))
 
 (begin
   (define* (password-reset-html-template #:key system-name user reset-link)
-    (let* ((tree `((html (body (div (h1 (span ,(gettext
+    (let* ((style (mk-css-conf-lines `((h1 (color . red)))))
+           (tree `((html (head (meta (@ (name . viewport)
+                                        (content . "width=device-width")))
+                               (style ,style))
+                         (body (div (h1 (span ,(gettext
                                                 "Reset your password: "))
                                         (span ,system-name))
                                     (p ,(gettext
                                          "We have received a request to reset the password for your user account:"))
-                                    (dl (@ (style ,(->inline-css '((padding . "1.2em")
-                                                                   (border-radius . "0.6em")
-                                                                   (margin-top . "0.6em")
-                                                                   (margin-bottom . "0.6em")))))
+                                    (dl (@ (style ,(->style '((padding . "1.2em")
+                                                              (border-radius . "0.6em")
+                                                              (margin-top . "0.6em")
+                                                              (margin-bottom . "0.6em")))))
                                         (dt ,(gettext "User:"))
                                         (dd ,user))
                                     (span "")
