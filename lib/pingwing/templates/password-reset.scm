@@ -28,27 +28,52 @@
   #:use-module (ice-9 iconv))
 
 (begin
-  (define* (password-reset-mail-template #:key system-name user reset-link)
-    (let* ((tree `((h1 (span ,(G_ "Reset your password: "))
+  (define* (password-reset-html-template #:key system-name user reset-link)
+    (let* ((tree `((h1 (span ,(gettext "Reset your password: "))
                        (span ,system-name))
-                   (p ,(G_
+                   (p ,(gettext
                         "We have received a request to reset the password for your user account:"))
-                   (dl (dt ,(G_ "User:"))
+                   (dl (dt ,(gettext "User:"))
                        (dd ,user))
                    (a (@ (href ,reset-link))
-                      (button ,(G_ "Go reset your password on ")
+                      (button ,(gettext "Go reset your password on ")
                               ,system-name))
                    (hr)
-                   (p ,(G_
+                   (p ,(gettext
                         "Feel free to ignore this e-mail if you did not request it."))
-                   (p ,(G_
+                   (p ,(gettext
                         "If you had trouble clicking that link, please manually copy paste it:"))
                    (p ,reset-link)
                    (hr)
-                   (em ,(G_
+                   (em ,(gettext
                          "this e-mail was powered by pingwing - the free and open Lisp-powered notification nexus"))
                    (a (@ (href "https://codeberg.org/jjba23/pingwing"))
-                      (button ,(G_ "see pingwing's source code on Codeberg"))))))
+                      (button ,(gettext "see pingwing's source code on Codeberg"))))))
       (with-output-to-string (lambda ()
                                (sxml->xml tree)))))
-  (export password-reset-mail-template))
+  (export password-reset-html-template))
+
+
+(begin
+  (define* (password-reset-plain-template #:key system-name user reset-link)
+    (let* ((content (list (gettext "Reset your password: ")
+                          (gettext
+                           "We have received a request to reset the password for your user account:")
+                          (gettext "User:")
+                          user
+                          (gettext "Go reset your password on ")
+                          system-name
+                          reset-link
+                          "----------------------------------"
+                          (gettext
+                           "Feel free to ignore this e-mail if you did not request it.")
+                          (gettext
+                           "If you had trouble clicking that link, please manually copy paste it:")
+                          reset-link
+                          "----------------------------------"
+                          (gettext
+                           "this e-mail was powered by pingwing - the free and open Lisp-powered notification nexus")
+                          "https://codeberg.org/jjba23/pingwing"
+                          (gettext "see pingwing's source code on Codeberg"))))
+      (string-join content "\n")))
+  (export password-reset-plain-template))

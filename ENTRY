@@ -41,7 +41,7 @@
           (access-secret unquote pingwing-mail-access-secret)
           (access-server unquote pingwing-mail-access-server)
           (access-port unquote pingwing-mail-access-port))
-    (pingwing (worker-sleep-seconds . 10))))
+    (pingwing (worker-sleep-seconds . 5))))
 
 ;; Store the thread object belonging to the pingwing queue worker
 (define worker-thread

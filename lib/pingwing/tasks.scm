@@ -29,6 +29,7 @@
   #:use-module (artanis ssql)
   #:use-module (srfi srfi-64)
   #:use-module (pingwing process)
+  #:use-module (pingwing templates password-reset)
   #:use-module (pingwing query-escape)
   #:use-module (app models task))
 
@@ -62,7 +63,7 @@
                       to-address
                       access-key
                       access-secret
-                      body
+                      (escape-plain body)
                       (escape-str body-html)
                       ;; attachments
                       ;; file
@@ -92,12 +93,16 @@
                                                'access-port)
                       #:from-name (unescape-str (assoc-ref task "sender_name"))
                       #:from-address (unescape-str (assoc-ref task
-                                                    "sender_address"))
+                                                              "sender_address"))
                       #:to-name (car (string-split recipient #\^))
                       #:to-address (cadr (string-split recipient #\^))
                       #:subject (assoc-ref task "subject")
-                      #:body (assoc-ref task "body")
-                      #:body-html "<h1>PRETTY</h1>"))
+                      #:body (password-reset-plain-template #:system-name "wikimusic"
+                                                            #:user "jjbigorra@gmail.com"
+                                                            #:reset-link "https://gnu.org")
+                      #:body-html (password-reset-html-template #:system-name "wikimusic"
+                                                                #:user "jjbigorra@gmail.com"
+                                                                #:reset-link "https://gnu.org")))
 
 (define (log-separator)
   (display "\n========================"))

@@ -25,22 +25,34 @@
   '(("'" "&apos;")
     ("\"" "&quot;")))
 
-(define-public (escape-str str)
-  (define result
-    str)
-  (for-each (lambda (p)
-              (set! result
-                    (string-replace-substring result
-                                              (car p)
-                                              (car (cdr p))))) escape-alist)
-  result)
+(define escape-plain-alist
+  '(("'" "\\'")))
 
-(define-public (unescape-str str)
-  (define result
-    str)
-  (for-each (lambda (p)
-              (set! result
-                    (string-replace-substring result
-                                              (car (cdr p))
-                                              (car p)))) escape-alist) result)
+(begin
+  (define* (escape-plain str)
+    (escape-str str escape-plain-alist))
+  (export escape-plain))
+
+(begin
+  (define* (escape-str str #:optional (dict escape-alist))
+    (define result
+      str)
+    (for-each (lambda (p)
+                (set! result
+                      (string-replace-substring result
+                                                (car p)
+                                                (car (cdr p))))) escape-alist)
+    result)
+  (export escape-str))
+
+(begin
+  (define* (unescape-str str #:optional (dict escape-alist))
+    (define result
+      str)
+    (for-each (lambda (p)
+                (set! result
+                      (string-replace-substring result
+                                                (car (cdr p))
+                                                (car p)))) escape-alist) result)
+  (export unescape-str))
 
