@@ -92,7 +92,7 @@
                                                'access-port)
                       #:from-name (unescape-str (assoc-ref task "sender_name"))
                       #:from-address (unescape-str (assoc-ref task
-                                                              "sender_address"))
+                                                    "sender_address"))
                       #:to-name (car (string-split recipient #\^))
                       #:to-address (cadr (string-split recipient #\^))
                       #:subject (assoc-ref task "subject")
@@ -100,22 +100,21 @@
                       #:body-html "<h1>PRETTY</h1>"))
 
 (define (log-separator)
-  (display "\n\n========================\n"))
+  (display "\n========================"))
 
 (define (log-info msg)
-  (display (format #f ">>= ~a" msg)))
+  (display (format #f "\n>>= ~a\n" msg)))
 
 (define* (pingwing-task-processor #:key task pingwing-settings)
   (let ((conn (get-conn-from-pool!)))
     (log-separator)
-    (log-info "processing pingwing task")
+    (log-info (gettext "processing pingwing task"))
 
     (for-each (lambda (recipient)
                 (do-send-mail #:recipient recipient
                               #:pingwing-settings pingwing-settings
                               #:task task))
-              (vector->list (json-string->scm (unescape-str (assoc-ref
-                                                             task
+              (vector->list (json-string->scm (unescape-str (assoc-ref task
                                                              "recipients")))))
     (DB-query conn
               (->sql update
@@ -126,31 +125,30 @@
     (DB-close conn)))
 
 (define-public (pingwing-worker-thread pingwing-settings)
-  (display (format #f "\n~a...\n"
-                   (gettext "initializing pingwing queue worker")))
+  (log-separator)
+  (log-info (gettext "initializing pingwing queue worker"))
 
   (use-modules (pingwing tasks)
                (app models task))
 
   (while #t
-    (let* ((next-task ($task 'get
-                             #:ret 1
-                             #:condition (where #:task_status
-                                                "pending")
-                             #:order-by "created_at ASC"))
-           (exception-handler (lambda (key . args)
-                                (display (format #f
-                                                 "\nerror processing task: ~a ~a"
-                                                 key args)))))
-      (when (eq? (length next-task) 1)
-        (catch #t
-          (lambda ()
-            (pingwing-task-processor #:task (car next-task)
-                                     #:pingwing-settings
-                                     pingwing-settings))
-          exception-handler))
-      
-      (sleep (assoc-ref (assoc-ref pingwing-settings
-                                   'pingwing)
-                        'worker-sleep-seconds)))))
+         (let* ((next-task ($task 'get
+                                  #:ret 1
+                                  #:condition (where #:task_status "pending")
+                                  #:order-by "created_at ASC"))
+                (exception-handler (lambda (key . args)
+                                     (display (format #f
+                                               "\nerror processing task: ~a ~a"
+                                               key args)))))
+           (when (eq? (length next-task) 1)
+             (catch #t
+                    (lambda ()
+                      (pingwing-task-processor #:task (car next-task)
+                                               #:pingwing-settings
+                                               pingwing-settings))
+                    exception-handler))
+
+           (sleep (assoc-ref (assoc-ref pingwing-settings
+                                        'pingwing)
+                             'worker-sleep-seconds)))))
 
