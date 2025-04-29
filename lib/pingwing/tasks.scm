@@ -1,4 +1,4 @@
-;;; pingwing
+;;; pingwing -- the free and open Lisp-powered notification nexus
 
 ;; Copyright © Josep Bigorra <jjbigorra@gmail.com>
 
@@ -100,6 +100,28 @@
                       #:body (assoc-ref task "body")
                       #:body-html "<h1>PRETTY</h1>"))
 
+(define* (task-processor)
+  (let ((conn (get-conn-from-pool!)))
+    (display "
+========================
+processing pingwing task
+")
+    (write oldest-task-not-done)
+
+    (for-each (lambda (recipient)
+                (do-send-mail #:recipient recipient
+                              #:pingwing-settings pingwing-settings
+                              #:task (car oldest-task-not-done)))
+              (string-split (assoc-ref (car oldest-task-not-done) "recipients")
+                            #\;))
+    (DB-query conn
+              (->sql update
+                     'task set
+                     `((task_status complete)
+                       (updated_at ,(current-time)))
+                     (where #:id (assoc-ref (car oldest-task-not-done) "id"))))
+    (DB-close conn)))
+
 (define-public (pingwing-worker-thread pingwing-settings)
   (display (format #f "\n~a...\n"
                    (gettext "initializing pingwing queue worker")))
@@ -112,37 +134,12 @@
                                              #:ret 1
                                              #:condition (where #:task_status
                                                                 "pending")
-                                             #:order-by "created_at ASC")))
+                                             #:order-by "created_at ASC"))
+                (exception-handler (lambda (key . args)
+                                     (display (format #f
+                                               "\nerror processing task: ~a ~a"
+                                               key args)))))
            (unless (nil? oldest-task-not-done)
-             (catch #t
-                    (lambda ()
-                      (display "
-================
-processing pingwing task
-")
-                      (write oldest-task-not-done)
-
-                      (for-each (lambda (recipient)
-                                  (do-send-mail #:recipient recipient
-                                                #:pingwing-settings
-                                                pingwing-settings
-                                                #:task (car
-                                                        oldest-task-not-done)))
-                                (string-split (assoc-ref (car
-                                                          oldest-task-not-done)
-                                                         "recipients") #\;))
-                      (let ((conn (get-conn-from-pool!)))
-                        (DB-query conn
-                                  (->sql update
-                                         'task set
-                                         `((task_status complete)
-                                           (updated_at ,(current-time)))
-                                         (where #:id (assoc-ref (car
-                                                                 oldest-task-not-done)
-                                                                "id"))))
-                        (DB-close conn)))
-                    (lambda (key . args)
-                      (display (format #f "\nerror processing task: ~a ~a" key
-                                       args)))))
-           (sleep 10))))
+             (catch #t task-processor exception-handler))
+           (sleep 5))))
 

@@ -55,7 +55,7 @@
     (set! worker-thread t)))
 
 ;; Add hook on before running the Artanis application to start the queue worker
-(run-before-run! start-worker)
+;;(run-before-run! start-worker)
 
 ;; Procedure to stop the pingwing queue worker
 (define (cancel-worker)

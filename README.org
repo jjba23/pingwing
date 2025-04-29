@@ -53,10 +53,19 @@ curl -v \
      -H "Content-Type: application/json" \
      -d '{
          "task-type": "send-email",
-         "sender": "No Reply - WikiMusic^noreply@wikimusic.jointhefreeworld.org",
+         "template": "password-reset",
+         "template-vars": {
+           "system-name": "WikiMusic",
+           "user": "jjbigorra@gmail.com",
+           "reset-link": "https://gnu.org"
+         },
+         "sender-name": "No Reply - WikiMusic",
+         "sender-address": "noreply@wikimusic.jointhefreeworld.org",
          "subject": "Wikimusic - Password Reset",
-         "recipients": "Josep Bigorra^jjbigorra@gmail.com;Josep Bigorra 1^jjbigorra+1@gmail.com",
-         "body": "Some message that I want to send"
+         "recipients": [
+           "Josep Bigorra^jjbigorra@gmail.com",
+           "Another Joe^jjbigorra+1@gmail.com"
+         ]
        }' \
      'http://localhost:50077/api/v1/tasks'
 #+end_src

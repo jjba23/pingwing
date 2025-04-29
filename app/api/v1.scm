@@ -32,22 +32,36 @@
                                       `((id unquote
                                             (assoc-ref t "id"))
                                         (task-status unquote
-                                                     (assoc-ref t
-                                                                "task_status"))
+                                                     (unescape-str (assoc-ref
+                                                                    t
+                                                                    "task_status")))
                                         (task-type unquote
-                                                   (assoc-ref t "task_type"))
-                                        (sender unquote
-                                                (unescape-str (assoc-ref t
-                                                               "sender")))
+                                                   (unescape-str (assoc-ref t
+                                                                  "task_type")))
+                                        (template unquote
+                                                  (unescape-str (assoc-ref t
+                                                                 "template")))
+                                        (template-vars unquote
+                                                       (unescape-str (assoc-ref
+                                                                      t
+                                                                      "template_vars")))
+                                        (sender-name unquote
+                                                     (unescape-str (assoc-ref
+                                                                    t
+                                                                    "sender_name")))
+                                        (sender-address unquote
+                                                        (unescape-str (assoc-ref
+                                                                       t
+                                                                       "sender_address")))
                                         (subject unquote
                                                  (unescape-str (assoc-ref t
                                                                 "subject")))
                                         (recipients unquote
-                                                    (unescape-str (assoc-ref t
-                                                                   "recipients")))
-                                        (body unquote
-                                              (unescape-str (assoc-ref t
-                                                                       "body")))
+                                                    (string-split (unescape-str
+                                                                   (assoc-ref
+                                                                    t
+                                                                    "recipients"))
+                                                                  #\;))
                                         (created-at unquote
                                                     (assoc-ref t "created_at"))
                                         (updated-at unquote
@@ -72,10 +86,17 @@
                           #:id uid
                           #:task_status 'pending
                           #:task_type (assoc-ref b "task-type")
-                          #:sender (escape-str (assoc-ref b "sender"))
+                          #:template (escape-str (assoc-ref b "template"))
+                          #:template_vars (escape-str (scm->json-string (assoc-ref
+                                                                         b
+                                                                         "template-vars")))
+                          #:sender_name (escape-str (assoc-ref b "sender-name"))
+                          #:sender_address (escape-str (assoc-ref b
+                                                        "sender-address"))
                           #:subject (escape-str (assoc-ref b "subject"))
-                          #:recipients (escape-str (assoc-ref b "recipients"))
-                          #:body (escape-str (assoc-ref b "body"))
+                          #:recipients (escape-str (scm->json-string (assoc-ref
+                                                                      b
+                                                                      "recipients")))
                           #:created_at now)
                    (:mime rc
                           `((message unquote message)))))

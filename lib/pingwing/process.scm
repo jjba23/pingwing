@@ -1,4 +1,4 @@
-;;; pingwing -- The free and open Lisp-powered notification nexus
+;;; pingwing -- the free and open Lisp-powered notification nexus
 
 ;; Copyright © Josep Bigorra <jjbigorra@gmail.com>
 
