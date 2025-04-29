@@ -30,6 +30,7 @@
   #:use-module (artanis ssql)
   #:use-module (srfi srfi-64)
   #:use-module (pingwing process)
+  #:use-module (pingwing base64)
   #:use-module (pingwing templates password-reset)
   #:use-module (pingwing query-escape)
   #:use-module (app models task))
@@ -48,8 +49,9 @@
                              body-html)
 
   
-  (let* ((html-file (format #f "tmp/~a/~a-~a-body.html" id from-address to-address))
-         (text-file (format #f "tmp/~a/~a-~a-body.txt" id from-address to-address))
+  (let* ((unico (format #f "~a-~a-~a" id from-address to-address))
+         (html-file (format #f "tmp/~a.html" unico))
+         (text-file (format #f "tmp/~a.txt" unico))
          (_ (with-output-to-file html-file
               (lambda() (display body-html))))
          (_ (with-output-to-file text-file
@@ -62,9 +64,9 @@
                                      "--mail-rcpt '~a'"
                                      "--mail-rcpt-allowfails"
                                      ;; headers
-                                     "-H \"From: \"~a\" <~a>\""
-                                     "-H \"To: \"~a\" <~a>\""
-                                     "-H \"Subject: ~a\""
+                                     "-H \"From: \\\"~a\\\" <~a>\""
+                                     "-H \"To: \\\"~a\\\" <~a>\""
+                                     "-H \"Subject: \\\"~a\\\" \""
                                      ;; "-H \"Reply-To: ~a\""
                                      ;; form
                                      "-F '=(;type=multipart/alternative'"
@@ -90,7 +92,10 @@
                       )))
     (log-separator)
     (log-info (format #f "sending mail to ~a\n" access-server))
-    (display cmd)))
+    (display cmd)
+    (catch #t (lambda() (delete-file html-file)) (lambda(key . args) '()))
+    (catch #t (lambda() (delete-file text-file)) (lambda(key . args) '()))))
+
 
 (define* (body-from-task #:key task)
   (display (string->symbol (assoc-ref task "template")))
@@ -100,7 +105,7 @@
                                                                      v
                                                                      "system-name")
                                                       #:user (assoc-ref v
-                                                              "user")
+                                                                        "user")
                                                       #:reset-link (assoc-ref
                                                                     v
                                                                     "reset-link")))
@@ -152,18 +157,12 @@
   (let ((conn (get-conn-from-pool!)))
     (log-separator)
     (log-info (gettext "processing pingwing task"))
-    (catch #t
-           (lambda ()
-             (mkdir (format #f "tmp/~a"
-                            (assoc-ref task "id"))))
-           (lambda (key . args)
-             '()))
     (for-each (lambda (recipient)
                 (do-send-mail #:recipient recipient
                               #:pingwing-settings pingwing-settings
                               #:task task))
               (vector->list (json-string->scm (unescape-str (assoc-ref task
-                                                             "recipients")))))
+                                                                       "recipients")))))
     (DB-query conn
               (->sql update
                      'task set
