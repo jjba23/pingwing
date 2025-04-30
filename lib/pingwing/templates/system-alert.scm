@@ -44,7 +44,7 @@
                                    (span ,system-name))
                                (p ,(gettext
                                     "An alert has been triggered from your system"))
-                               (hr)
+                               (hr (@ (style ,(->style '((margin-top . "1.4em") (margin-bottom . "1.4em"))))))
                                (p ,alert-value)
                                ,mail-footer)))))
       (with-output-to-string (lambda ()

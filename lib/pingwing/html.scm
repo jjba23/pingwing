@@ -20,6 +20,7 @@
   #:use-module (ice-9 time)
   #:use-module (ice-9 format)
   #:use-module (ice-9 string-fun)
+  #:use-module (pingwing css)
   #:use-module (ice-9 iconv))
 
 (define-public meta-charset
@@ -43,8 +44,8 @@
             (content . "light dark"))))
 
 (define-public mail-footer
-  `((hr)
-    (p (em ,(gettext
-             "this e-mail was powered by pingwing - the free and open Lisp-powered notification nexus")))
-    (a (@ (href . "https://codeberg.org/jjba23/pingwing"))
-       ,(gettext "see pingwing's source code on Codeberg"))))
+  `((hr (@ (style ,(->style '((margin-top . "1.6em") (margin-bottom . "1.6em"))))))
+    (p (small (em ,(gettext
+                    "this e-mail was powered by pingwing - the free and open Lisp-powered notification nexus"))))
+    (p (a (@ (href . "https://codeberg.org/jjba23/pingwing"))
+          (small ,(gettext "🔗 find pingwing's source code on Codeberg"))))))

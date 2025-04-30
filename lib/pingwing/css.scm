@@ -49,9 +49,9 @@
                               (cdr x))) xs) " "))
 
 (define-public mail-style
-  (let* ((common-style (mk-css-conf-lines `((button (border-radius . "0.8em")
-                                                    (font-weight . bold)
-                                                    (padding . "0.8em"))
+  (let* ((common-style (mk-css-conf-lines `((".button-link" (border-radius . "0.8em")
+                                              (font-weight . bold)
+                                              (padding . "0.8em"))
                                             (p (font-size . "1.2em")
                                                (margin-top . "1.0em"))
                                             (dl (padding . "1.2em")

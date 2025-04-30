@@ -38,19 +38,20 @@
                                ,meta-supported-color-schemes
                                (title ,(gettext "Password Reset"))
                                (style ,mail-style))
-                         (body (h1 (span ,(gettext
-                                           "Reset your password: "))
+                         (body (h1 (span ,(gettext "Reset your password: "))
                                    (span ,system-name))
                                (p ,(gettext
                                     "We have received a request to reset the password for your user account:"))
-                               (table (tr (td ,(gettext "User:"))
+                               (table (@ (style ,(->style '((margin-top . "1.4em")
+                                                            (margin-bottom . "1.4em")))))
+                                      (tr (td ,(gettext "User:"))
                                           (td ,user)))
                                (a (@ (class . "button-link")
                                      (href unquote reset-link))
-                                  ,(gettext
-                                    "🔗 Reset your password on ")
+                                  ,(gettext "🔗 Reset your password on ")
                                   ,system-name)
-                               (hr)
+                               (hr (@ (style ,(->style '((margin-top . "1.4em")
+                                                         (margin-bottom . "1.4em"))))))
                                (p ,(gettext
                                     "Feel free to ignore this e-mail if you did not request it."))
                                (p ,(gettext
