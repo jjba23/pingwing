@@ -65,8 +65,7 @@
       :error (cl-function (lambda (&key error &allow-other-keys)
                             (message "Error: %s" error))))))
 
-;;(pingwing-create-task pingwing-reset-password-mail)
-;;(pingwing-create-task pingwing-system-alert-mail)
+;;(progn (pingwing-create-task pingwing-reset-password-mail) (pingwing-create-task pingwing-system-alert-mail) )
 
 
 (provide 'pingwing-http-util)
