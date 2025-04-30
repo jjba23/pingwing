@@ -32,6 +32,7 @@
   #:use-module (pingwing process)
   #:use-module (pingwing base64)
   #:use-module (pingwing templates password-reset)
+  #:use-module (pingwing templates system-alert)
   #:use-module (pingwing query-escape)
   #:use-module (app models task))
 
@@ -55,16 +56,16 @@
          (_ (with-output-to-file the-file
               (lambda ()
                 (display (string-join `("MIME-Version: 1.0" ,(format #f
-                                                                     "Subject: ~a"
-                                                                     subject)
+                                                              "Subject: ~a"
+                                                              subject)
                                         ,(format #f "From: ~a <~a>" from-name
                                                  from-address)
                                         ,(format #f "To: ~a <~a>" to-name
                                                  to-address)
                                         ;; TODO reply-to, cc, bcc
                                         ,(format #f
-                                                 "Content-Type: multipart/alternative; boundary=\"~a\""
-                                                 multipart-boundary)
+                                          "Content-Type: multipart/alternative; boundary=\"~a\""
+                                          multipart-boundary)
                                         ""
                                         ,(format #f "--~a" multipart-boundary)
                                         "Content-Type: text/plain; charset=\"UTF-8\""
@@ -99,10 +100,7 @@
     (log-separator)
     (log-info (format #f "sending mail to ~a\n" access-server))
     (display cmd)
-    (syscall cmd)
-    ;; (catch #t (lambda() (delete-file html-file)) (lambda(key . args) '()))
-    ;; (catch #t (lambda() (delete-file text-file)) (lambda(key . args) '()))
-    ))
+    (syscall cmd)))
 
 (define* (body-from-task #:key task)
   (let* ((v (json-string->scm (unescape-str (assoc-ref task "template_vars")))))
@@ -111,10 +109,14 @@
                                                                      v
                                                                      "system-name")
                                                       #:user (assoc-ref v
-                                                                        "user")
+                                                              "user")
                                                       #:reset-link (assoc-ref
                                                                     v
                                                                     "reset-link")))
+      ('system-alert (system-alert-plain-template #:system-name (assoc-ref v
+                                                                 "system-name")
+                                                  #:alert-value (assoc-ref v
+                                                                 "alert-value")))
       (_ #f))))
 
 (define* (html-body-from-task #:key task)
@@ -126,7 +128,11 @@
                                                      #:user (assoc-ref v
                                                                        "user")
                                                      #:reset-link (assoc-ref v
-                                                                             "reset-link")))
+                                                                   "reset-link")))
+      ('system-alert (system-alert-html-template #:system-name (assoc-ref v
+                                                                "system-name")
+                                                 #:alert-value (assoc-ref v
+                                                                "alert-value")))
       (_ #f))))
 
 (define* (do-send-mail #:key task recipient pingwing-settings)

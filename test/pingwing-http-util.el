@@ -28,21 +28,33 @@
 
 ;;(pingwing-get-tasks)
 
+(setq pingwing-reset-password-mail '((task-type . send-email)
+                                     (template . password-reset)
+                                     (template-vars . ((system-name . WikiMusic)
+                                                       (user . "jjbigorra@gmail.com")
+                                                       (reset-link . "https://gnu.org")))
+                                     (sender-name . "No Reply - WikiMusic")
+                                     (sender-address . "noreply@wikimusic.jointhefreeworld.org")
+                                     (subject . "WikiMusic - Password Reset")
+                                     (recipients . (((name . "Josep Bigorra")(address . "jjbigorra@gmail.com"))))))
+
+(setq pingwing-system-alert-mail '((task-type . send-email)
+                                   (template . system-alert)
+                                   (template-vars . ((system-name . WikiMusic)
+                                                     (alert-value . "CPU utilization exceeded the threshold of 80%")
+                                                     ))
+                                   (sender-name . "No Reply - Oculuslambda")
+                                   (sender-address . "noreply@oculuslambda.jointhefreeworld.org")
+                                   (subject . "Oculuslambda - CPU usage")
+                                   (recipients . (((name . "Josep Bigorra")(address . "jjbigorra@gmail.com"))))))
+
 (defun pingwing-create-task ()
   "Create a simple task in pingwing."
   (let* ((host "http://localhost:50077"))
     (request (string-join `(,host
                             "/api/v1/tasks"))
       :type "POST"
-      :data (json-encode '((task-type . send-email)
-                           (template . password-reset)
-                           (template-vars . ((system-name . WikiMusic)
-                                             (user . "jjbigorra@gmail.com")
-                                             (reset-link . "https://gnu.org")))
-                           (sender-name . "No Reply - WikiMusic")
-                           (sender-address . "noreply@wikimusic.jointhefreeworld.org")
-                           (subject . "WikiMusic - Password Reset")
-                           (recipients . (((name . "Josep Bigorra")(address . "jjbigorra@gmail.com"))))))
+      :data (json-encode pingwing-system-alert-mail)
       :headers '(("Content-Type" . "application/json"))
       :parser 'json-read
       :success (cl-function
@@ -54,6 +66,7 @@
                             (message "Error: %s" error))))))
 
 ;;(pingwing-create-task)
+
 
 (provide 'pingwing-http-util)
 
