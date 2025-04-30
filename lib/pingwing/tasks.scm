@@ -55,16 +55,16 @@
          (_ (with-output-to-file the-file
               (lambda ()
                 (display (string-join `("MIME-Version: 1.0" ,(format #f
-                                                              "Subject: ~a"
-                                                              subject)
+                                                                     "Subject: ~a"
+                                                                     subject)
                                         ,(format #f "From: ~a <~a>" from-name
                                                  from-address)
                                         ,(format #f "To: ~a <~a>" to-name
                                                  to-address)
                                         ;; TODO reply-to, cc, bcc
                                         ,(format #f
-                                          "Content-Type: multipart/alternative; boundary=\"~a\""
-                                          multipart-boundary)
+                                                 "Content-Type: multipart/alternative; boundary=\"~a\""
+                                                 multipart-boundary)
                                         ""
                                         ,(format #f "--~a" multipart-boundary)
                                         "Content-Type: text/plain; charset=\"UTF-8\""
@@ -105,21 +105,19 @@
     ))
 
 (define* (body-from-task #:key task)
-  (display (string->symbol (assoc-ref task "template")))
   (let* ((v (json-string->scm (unescape-str (assoc-ref task "template_vars")))))
     (match (string->symbol (assoc-ref task "template"))
       ('password-reset (password-reset-plain-template #:system-name (assoc-ref
                                                                      v
                                                                      "system-name")
                                                       #:user (assoc-ref v
-                                                              "user")
+                                                                        "user")
                                                       #:reset-link (assoc-ref
                                                                     v
                                                                     "reset-link")))
       (_ #f))))
 
 (define* (html-body-from-task #:key task)
-  (display (string->symbol (assoc-ref task "template")))
   (let* ((v (json-string->scm (unescape-str (assoc-ref task "template_vars")))))
     (match (string->symbol (assoc-ref task "template"))
       ('password-reset (password-reset-html-template #:system-name (assoc-ref
@@ -128,7 +126,7 @@
                                                      #:user (assoc-ref v
                                                                        "user")
                                                      #:reset-link (assoc-ref v
-                                                                   "reset-link")))
+                                                                             "reset-link")))
       (_ #f))))
 
 (define* (do-send-mail #:key task recipient pingwing-settings)

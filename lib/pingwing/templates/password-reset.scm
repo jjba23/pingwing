@@ -30,26 +30,7 @@
 
 (begin
   (define* (password-reset-html-template #:key system-name user reset-link)
-    (let* ((common-style (mk-css-conf-lines `((button
-                                                      (border-radius . "0.8em")
-                                                      (font-weight . bold)
-                                                      (padding . "0.8em"))
-                                              (p (font-size . "1.2em")
-                                                 (margin-top . "1.0em")))))
-           (light-style (mk-css-conf-lines `(("h1, h2, h3, h4, p"
-                                              (color . "#2b3339"))
-                                             ("button"
-                                              (background . "#a7c080")
-                                              (color . "#2b3339")))))
-           (dark-style (mk-css-conf-lines `(("h1, h2, h3, h4, p"
-                                             (color . "#d3c6aa"))
-                                            ("button" (background . "#a7c080")
-                                             (color . "#2b3339")))))
-           (style (string-replace-substring (string-join (list common-style
-                                                          light-style
-                                                          "@media (prefers-color-scheme: dark) {\n"
-                                                          dark-style "}") "\n")
-                                            "\n" ""))
+    (let* (
            (tree `((html (head (meta (@ (http-equiv . Content-Type)
                                         (content . "text/html; charset=utf-8")))
                                (meta (@ (http-equiv . X-UA-Compatible)
@@ -60,18 +41,15 @@
                                         (content . "light dark")))
                                (meta (@ (name . supported-color-schemes)
                                         (content . "light dark")))
-                               (style ,style))
+                               (style ,mail-style))
                          (body (div (h1 (span ,(gettext
                                                 "Reset your password: "))
                                         (span ,system-name))
                                     (p ,(gettext
                                          "We have received a request to reset the password for your user account:"))
-                                    (dl (@ (style ,(->style '((padding . "1.2em")
-                                                              (border-radius . "0.6em")
-                                                              (margin-top . "0.6em")
-                                                              (margin-bottom . "0.6em")))))
-                                        (dt ,(gettext "User:"))
-                                        (dd ,user))
+                                    (dl 
+                                     (dt ,(gettext "User:"))
+                                     (dd ,user))
                                     (a (@ (href unquote reset-link))
                                        (button ,(gettext
                                                  "🔗 Reset your password on ")
@@ -86,7 +64,7 @@
                                     (p (em ,(gettext
                                              "this e-mail was powered by pingwing - the free and open Lisp-powered notification nexus")))
                                     (a (@
-                                          (href . "https://codeberg.org/jjba23/pingwing"))
+                                        (href . "https://codeberg.org/jjba23/pingwing"))
                                        (button ,(gettext
                                                  "see pingwing's source code on Codeberg")))))))))
       (with-output-to-string (lambda ()

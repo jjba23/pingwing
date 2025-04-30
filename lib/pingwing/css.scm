@@ -48,3 +48,29 @@
                               (car x)
                               (cdr x))) xs) " "))
 
+(define-public mail-style
+  (let* ((common-style (mk-css-conf-lines `((button (border-radius . "0.8em")
+                                                    (font-weight . bold)
+                                                    (padding . "0.8em"))
+                                            (p (font-size . "1.2em")
+                                               (margin-top . "1.0em"))
+                                            (dl (padding . "1.2em")
+                                                (font-size . "1.2em")
+                                                (border-radius . "0.6em")
+                                                (margin-top . "0.6em")
+                                                (margin-bottom . "0.6em")))))
+         (light-style (mk-css-conf-lines `(("h1, h2, h3, h4, p"
+                                            (color . "#2b3339"))
+                                           ("button" (background . "#a7c080")
+                                            (color . "#2b3339")))))
+         (dark-style (mk-css-conf-lines `(("h1, h2, h3, h4, p"
+                                           (color . "#d3c6aa"))
+                                          ("button" (background . "#a7c080")
+                                           (color . "#2b3339")))))
+         (style (string-replace-substring (string-join (list common-style
+                                                             light-style
+                                                             "@media (prefers-color-scheme: dark) {\n"
+                                                             dark-style "}") "\n")
+                                          "\n" "")))
+    style))
+
