@@ -47,4 +47,4 @@
     (div (p (em ,(gettext
                   "this e-mail was powered by pingwing - the free and open Lisp-powered notification nexus")))
          (a (@ (href . "https://codeberg.org/jjba23/pingwing"))
-            (button ,(gettext "see pingwing's source code on Codeberg"))))))
+            ,(gettext "see pingwing's source code on Codeberg")))))

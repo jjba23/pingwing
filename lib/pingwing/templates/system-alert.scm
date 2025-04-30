@@ -37,6 +37,7 @@
                                ,meta-responsive
                                ,meta-color-scheme
                                ,meta-supported-color-schemes
+                               (title ,(gettext "System Alert"))
                                (style ,mail-style))
                          (body (div (h1 (span ,(gettext
                                                 "System Alert: "))

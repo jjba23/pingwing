@@ -54,7 +54,7 @@
     (request (string-join `(,host
                             "/api/v1/tasks"))
       :type "POST"
-      :data (json-encode pingwing-system-alert-mail)
+      :data (json-encode pingwing-reset-password-mail)
       :headers '(("Content-Type" . "application/json"))
       :parser 'json-read
       :success (cl-function
