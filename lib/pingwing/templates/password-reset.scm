@@ -42,16 +42,18 @@
                                    (span ,system-name))
                                (p ,(gettext
                                     "We have received a request to reset the password for your user account:"))
-                               (table (@ (style ,(->style '((margin-top . "1.4em")
-                                                            (margin-bottom . "1.4em")))))
+                               (table (@ (style ,(->style '((margin-top . "1.6em")
+                                                            (margin-bottom . "1.6em")))))
                                       (tr (td ,(gettext "User:"))
                                           (td ,user)))
+
+                               (hr (@ (style ,(->style '((margin-top . "1.4em")
+                                                         (margin-bottom . "1.4em"))))))
                                (a (@ (class . "button-link")
                                      (href unquote reset-link))
                                   ,(gettext "🔗 Reset your password on ")
                                   ,system-name)
-                               (hr (@ (style ,(->style '((margin-top . "1.4em")
-                                                         (margin-bottom . "1.4em"))))))
+                               (p (small ,reset-link))
                                (p ,(gettext
                                     "Feel free to ignore this e-mail if you did not request it."))
                                (p ,(gettext

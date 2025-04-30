@@ -56,16 +56,17 @@
          (_ (with-output-to-file the-file
               (lambda ()
                 (display (string-join `("MIME-Version: 1.0" ,(format #f
-                                                              "Subject: ~a"
-                                                              subject)
+                                                                     "Subject: ~a ~a"
+                                                                     subject id
+                                                                     )
                                         ,(format #f "From: ~a <~a>" from-name
                                                  from-address)
                                         ,(format #f "To: ~a <~a>" to-name
                                                  to-address)
                                         ;; TODO reply-to, cc, bcc
                                         ,(format #f
-                                          "Content-Type: multipart/alternative; boundary=\"~a\""
-                                          multipart-boundary)
+                                                 "Content-Type: multipart/alternative; boundary=\"~a\""
+                                                 multipart-boundary)
                                         ""
                                         ,(format #f "--~a" multipart-boundary)
                                         "Content-Type: text/plain; charset=\"UTF-8\""
