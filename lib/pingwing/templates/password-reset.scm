@@ -56,9 +56,6 @@
                                (p (small ,reset-link))
                                (p ,(gettext
                                     "Feel free to ignore this e-mail if you did not request it."))
-                               (p ,(gettext
-                                    "If you had trouble clicking that link, please manually copy paste it:"))
-                               (p ,reset-link)
                                ,mail-footer)))))
       (with-output-to-string (lambda ()
                                (sxml->xml tree)))))
