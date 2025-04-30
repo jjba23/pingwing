@@ -39,15 +39,14 @@
                                ,meta-supported-color-schemes
                                (title ,(gettext "System Alert"))
                                (style ,mail-style))
-                         (body (section (h1 (span ,(gettext
-                                                    "System Alert: "))
-                                            (span ,system-name))
-                                        (p ,(gettext
-                                             "An alert has been triggered from your system"))
-                                        (hr)
-                                        (p ,alert-value)
-                                        ,mail-footer
-                                        ))))))
+                         (body (h1 (span ,(gettext
+                                           "System Alert: "))
+                                   (span ,system-name))
+                               (p ,(gettext
+                                    "An alert has been triggered from your system"))
+                               (hr)
+                               (p ,alert-value)
+                               ,mail-footer)))))
       (with-output-to-string (lambda ()
                                (sxml->xml tree)))))
   (export system-alert-html-template))

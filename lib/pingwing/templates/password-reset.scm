@@ -38,23 +38,25 @@
                                ,meta-supported-color-schemes
                                (title ,(gettext "Password Reset"))
                                (style ,mail-style))
-                         (body (section (h1 (span ,(gettext
-                                                    "Reset your password: "))
-                                            (span ,system-name))
-                                        (p ,(gettext
-                                             "We have received a request to reset the password for your user account:"))
-                                        (ul (li (span ,(gettext "User:")) (span ,user)))
-                                        (a (@ (class . "button-link")
-                                              (href unquote reset-link))
-                                           ,(gettext "🔗 Reset your password on ")
-                                           ,system-name)
-                                        (hr)
-                                        (p ,(gettext
-                                             "Feel free to ignore this e-mail if you did not request it."))
-                                        (p ,(gettext
-                                             "If you had trouble clicking that link, please manually copy paste it:"))
-                                        (p ,reset-link)
-                                        ,mail-footer))))))
+                         (body (h1 (span ,(gettext
+                                           "Reset your password: "))
+                                   (span ,system-name))
+                               (p ,(gettext
+                                    "We have received a request to reset the password for your user account:"))
+                               (table (tr (td ,(gettext "User:"))
+                                          (td ,user)))
+                               (a (@ (class . "button-link")
+                                     (href unquote reset-link))
+                                  ,(gettext
+                                    "🔗 Reset your password on ")
+                                  ,system-name)
+                               (hr)
+                               (p ,(gettext
+                                    "Feel free to ignore this e-mail if you did not request it."))
+                               (p ,(gettext
+                                    "If you had trouble clicking that link, please manually copy paste it:"))
+                               (p ,reset-link)
+                               ,mail-footer)))))
       (with-output-to-string (lambda ()
                                (sxml->xml tree)))))
   (export password-reset-html-template))

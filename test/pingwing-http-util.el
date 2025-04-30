@@ -48,13 +48,13 @@
                                    (subject . "Oculuslambda - CPU usage")
                                    (recipients . (((name . "Josep Bigorra")(address . "jjbigorra@gmail.com"))))))
 
-(defun pingwing-create-task ()
+(defun pingwing-create-task (data)
   "Create a simple task in pingwing."
   (let* ((host "http://localhost:50077"))
     (request (string-join `(,host
                             "/api/v1/tasks"))
       :type "POST"
-      :data (json-encode pingwing-reset-password-mail)
+      :data (json-encode data)
       :headers '(("Content-Type" . "application/json"))
       :parser 'json-read
       :success (cl-function
@@ -65,7 +65,8 @@
       :error (cl-function (lambda (&key error &allow-other-keys)
                             (message "Error: %s" error))))))
 
-;;(pingwing-create-task)
+;;(pingwing-create-task pingwing-reset-password-mail)
+;;(pingwing-create-task pingwing-system-alert-mail)
 
 
 (provide 'pingwing-http-util)

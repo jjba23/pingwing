@@ -44,7 +44,7 @@
 
 (define-public mail-footer
   `((hr)
-    (footer (p (em ,(gettext
-                     "this e-mail was powered by pingwing - the free and open Lisp-powered notification nexus")))
-            (a (@ (href . "https://codeberg.org/jjba23/pingwing"))
-               ,(gettext "see pingwing's source code on Codeberg")))))
+    (p (em ,(gettext
+             "this e-mail was powered by pingwing - the free and open Lisp-powered notification nexus")))
+    (a (@ (href . "https://codeberg.org/jjba23/pingwing"))
+       ,(gettext "see pingwing's source code on Codeberg"))))
