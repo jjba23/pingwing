@@ -30,9 +30,32 @@
 
 (begin
   (define* (password-reset-html-template #:key system-name user reset-link)
-    (let* ((style (mk-css-conf-lines `((h1 (color . red)))))
-           (tree `((html (head (meta (@ (name . viewport)
-                                        (content . "width=device-width")))
+    (let* ((light-style (mk-css-conf-lines `(("h1, h2, h3, h4, p"
+                                              (color . "#2b3339"))
+                                             ("button"
+                                              (border-radius . "0.8em")
+                                              (background . "#a7c080")
+                                              (color . "#2b3339")))))
+           (dark-style (mk-css-conf-lines `(("h1, h2, h3, h4, p"
+                                             (color . "#d3c6aa"))
+                                            ("button"
+                                             (border-radius . "0.8em")
+                                             (background . "#a7c080")
+                                             (color . "#2b3339")))))
+           (style (string-replace-substring (string-join (list light-style
+                                                               "@media (prefers-color-scheme: dark) {\n"
+                                                               dark-style "}") "\n")
+                                            "\n" ""))
+           (tree `((html (head (meta (@ (http-equiv . Content-Type)
+                                        (content . "text/html; charset=utf-8")))
+                               (meta (@ (http-equiv . X-UA-Compatible)
+                                        (content . "IE=edge")))
+                               (meta (@ (name . viewport)
+                                        (content . "width=device-width,initial-scale=1.0")))
+                               (meta (@ (name . color-scheme)
+                                        (content . "light dark")))
+                               (meta (@ (name . supported-color-schemes)
+                                        (content . "light dark")))
                                (style ,style))
                          (body (div (h1 (span ,(gettext
                                                 "Reset your password: "))
@@ -45,8 +68,7 @@
                                                               (margin-bottom . "0.6em")))))
                                         (dt ,(gettext "User:"))
                                         (dd ,user))
-                                    (span "")
-                                    (a (@ (href ,reset-link))
+                                    (a (@ (href . ,reset-link))
                                        (button ,(gettext
                                                  "🔗 Reset your password on ")
                                                ,system-name))
@@ -59,8 +81,8 @@
                                     (hr)
                                     (p (em ,(gettext
                                              "this e-mail was powered by pingwing - the free and open Lisp-powered notification nexus")))
-                                    (a (@ (href
-                                           "https://codeberg.org/jjba23/pingwing"))
+                                    (a (@ (href .
+                                                "https://codeberg.org/jjba23/pingwing"))
                                        (button ,(gettext
                                                  "see pingwing's source code on Codeberg")))))))))
       (with-output-to-string (lambda ()

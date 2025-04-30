@@ -31,14 +31,14 @@
                                          (display (format #f template
                                                           (car x)
                                                           (cdr x)))) pairs))))
-  
+
   (define* (mk-css-conf-lines pairs)
     (with-output-to-string (lambda ()
                              (for-each (lambda (x)
                                          (display (format #f "~a {\n"
                                                           (car x)))
                                          (display (mk-kv-conf-lines (cdr x)
-                                                                    #:template "  ~a: ~a;\n"))
+                                                   #:template "  ~a: ~a;\n"))
                                          (display "}\n\n")) pairs))))
   (export mk-css-conf-lines))
 
