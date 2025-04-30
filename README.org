@@ -21,7 +21,7 @@ The architecture is designed for future expansion, promising connectivity to a d
 
 This project is powered by Lisp (Guile Scheme), ~curl~ , ~make~ , SXML and the GNU Artanis web framework, among others.
 
-[[https://jointhefreeworld.org/static-assets/pingwing/pingwing-small.jpeg]]
+[[https://jointhefreeworld.org/static-assets/pingwing/logo-small.png]]
 
 Built upon the bedrock of Free Software principles and licensed under the GPLv3 or later, pingwing proudly leverages the ubiquitous curl utility for its network plumbing, ensuring broad compatibility and efficient data transfer.
 
