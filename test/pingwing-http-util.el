@@ -40,7 +40,7 @@
 
 (setq pingwing-system-alert-mail '((task-type . send-email)
                                    (template . system-alert)
-                                   (template-vars . ((system-name . WikiMusic)
+                                   (template-vars . ((system-name . Oculuslambda)
                                                      (alert-value . "CPU utilization exceeded the threshold of 80%")
                                                      ))
                                    (sender-name . "No Reply - Oculuslambda")

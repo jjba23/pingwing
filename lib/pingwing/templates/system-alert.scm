@@ -39,7 +39,7 @@
                                ,meta-supported-color-schemes
                                (style ,mail-style))
                          (body (div (h1 (span ,(gettext
-                                                "System Alert"))
+                                                "System Alert: "))
                                         (span ,system-name))
                                     (p ,(gettext
                                          "An alert has been triggered from your system"))
