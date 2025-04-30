@@ -49,11 +49,15 @@
                               (cdr x))) xs) " "))
 
 (define-public mail-style
-  (let* ((common-style (mk-css-conf-lines `((".button-link" (border-radius . "0.8em")
-                                              (font-weight . bold)
-                                              (padding . "0.8em"))
+  (let* ((common-style (mk-css-conf-lines `((".button-link"
+                                             (border-radius . "0.8em")
+                                             (font-weight . bold)
+                                             (padding . "0.8em"))
                                             (p (font-size . "1.2em")
                                                (margin-top . "1.0em"))
+                                            (a (font-size . "1.2em")
+                                               (margin-top . "1.0em"))
+                                            (td (font-size . "1.2em"))
                                             (dl (padding . "1.2em")
                                                 (font-size . "1.2em")
                                                 (border-radius . "0.6em")
@@ -68,9 +72,9 @@
                                           ("button" (background . "#a7c080")
                                            (color . "#2b3339")))))
          (style (string-replace-substring (string-join (list common-style
-                                                             light-style
-                                                             "@media (prefers-color-scheme: dark) {\n"
-                                                             dark-style "}") "\n")
+                                                        light-style
+                                                        "@media (prefers-color-scheme: dark) {\n"
+                                                        dark-style "}") "\n")
                                           "\n" "")))
     style))
 
