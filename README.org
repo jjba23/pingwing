@@ -19,11 +19,11 @@ Initial support includes SMTP for email delivery, with a pending integration for
 
 The architecture is designed for future expansion, promising connectivity to a diverse range of notification sinks.
 
-This project is powered by Lisp (Guile Scheme), ~curl~ , ~make~ , SXML and the GNU Artanis web framework, among others.
+This project is powered by Lisp (Guile Scheme), ~curl~ , ~make~ , SXML and the GNU Artanis web framework, SQLite, among others.
 
 [[https://jointhefreeworld.org/static-assets/pingwing/logo-small.png]]
 
-Built upon the bedrock of Free Software principles and licensed under the GPLv3 or later, pingwing proudly leverages the ubiquitous curl utility for its network plumbing, ensuring broad compatibility and efficient data transfer.
+This is free software, licensed under the GNU General Public License 3 or newer.
 
 This tool is compatible with any SMTP provider you can think of, thanks to its simple and agnostic approach.
 
@@ -50,7 +50,7 @@ curl -v 'http://localhost:50077/api/v1/tasks'
 
 *** Submit tasks
 
-Submit a task
+All you need to do to interact with pingwing is call the ~/api/v1/tasks~ with a ~POST~ method and give your preferences. See ~app/api/v1.scm~ for more details on the API, and ~lib/pingwing/tasks.scm~ for more.
 
 #+begin_src shell
 curl -v \
@@ -76,6 +76,36 @@ curl -v \
 
 
 You can submit tasks at super high rates to pingwing since the ingestion and processing are done completely separately. This ensures that we can do a reliable retry mechanism and can handle high volumes of data.
+
+------
+
+A task can be defined as:
+
+~task-type~ an enum, can be ~send-email~
+
+~template~ an enum, can be ~password-reset~ or ~system-alert~
+See ~lib/pingwing/templates/~ for more.
+
+~template-vars~ an object, where keys are variable names and values are their respective values, used for template compilation/interpretation.
+
+~sender-name~ string, the name to show as message sender
+
+~sender-address~ string, the address to show as message sender
+
+~subject~ string, the message subject, a UUID will be auto-appended to it.
+
+~recipients~ list of recipient objects
+
+recipient object: object containing the recipient ~name~ and ~address~.
+
+
+**** TODO: user-specified template in HTTP req (send Scheme code over the wire) (unimplemented)
+**** TODO : ~send-slack~ as task-type (unimplemented)
+
+
+-----
+
+** Details on how tasks are sent via e-mail
 
 After the task has submitted and picked up by the worker, a message like this will be produced:
 
@@ -141,3 +171,7 @@ curl --verbose --ssl-reqd --url smtp://email-smtp.eu-west-3.amazonaws.com:587 --
 100  3028    0     0  100  3028      0   5653 --:--:-- --:--:-- --:--:--  5649
 * Connection #0 to host email-smtp.eu-west-3.amazonaws.com left intact
 #+end_src
+
+** Tipje van de sluier
+
+It's recommended to run your SQLite database in WAL mode, for concurrent reads and writes. See the ~Makefile~ target ~init-db~
