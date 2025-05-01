@@ -25,11 +25,11 @@ This project is powered by Lisp (Guile Scheme), ~curl~ , ~make~ , SXML and the G
 
 Built upon the bedrock of Free Software principles and licensed under the GPLv3 or later, pingwing proudly leverages the ubiquitous curl utility for its network plumbing, ensuring broad compatibility and efficient data transfer.
 
-For those already immersed in the AWS ecosystem, practical examples showcasing seamless integration with Amazon SES SMTP are provided, offering a glimpse into its real-world utility.
+This tool is compatible with any SMTP provider you can think of, thanks to its simple and agnostic approach.
 
 ** Running
 
-You will need to specify some settings for pingwing to be able to start in ~env.scm~ at the root of the project.
+You will need to specify some settings for pingwing to be able to start in ~env.scm~ at the root of the project. Here follows an example for AWS SES email (via SMTP).
 
 #+begin_src scheme
 (define pingwing-mail-access-key "AK******")
@@ -40,11 +40,15 @@ You will need to specify some settings for pingwing to be able to start in ~env.
 
 ** Usage
 
+*** Fetch tasks
+
 Retrieve pending tasks from the database.
 
 #+begin_src shell
 curl -v 'http://localhost:50077/api/v1/tasks'
 #+end_src
+
+*** Submit tasks
 
 Submit a task
 
@@ -68,4 +72,72 @@ curl -v \
          ]
        }' \
      'http://localhost:50077/api/v1/tasks'
+#+end_src
+
+
+You can submit tasks at super high rates to pingwing since the ingestion and processing are done completely separately. This ensures that we can do a reliable retry mechanism and can handle high volumes of data.
+
+After the task has submitted and picked up by the worker, a message like this will be produced:
+
+#+begin_src http
+MIME-Version: 1.0
+Subject: WikiMusic - Password Reset 998c42eb-7472-4e12-aa5a-ffdbe754b430
+From: No Reply - WikiMusic <noreply@wikimusic.jointhefreeworld.org>
+To: Josep Bigorra <jjbigorra@gmail.com>
+Content-Type: multipart/alternative; boundary="pingwing-message-multipart-boundary-33c2b557-7f27-4339-9a85-2385e7ecde9b"
+
+--pingwing-message-multipart-boundary-33c2b557-7f27-4339-9a85-2385e7ecde9b
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+Reset your password: 
+We have received a request to reset the password for your user account:
+User.............
+
+--pingwing-message-multipart-boundary-33c2b557-7f27-4339-9a85-2385e7ecde9b
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<!DOCTYPE HTML>
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /><meta http-equiv="X-UA-Compatible" content="IE=edge" />..............
+
+--pingwing-message-multipart-boundary-33c2b557-7f27-4339-9a85-2385e7ecde9b--
+#+end_src
+
+And the worker will pick it up and send it:
+
+#+begin_src fundamental
+>>= sending mail to email-smtp.eu-west-3.amazonaws.com
+
+curl --verbose --ssl-reqd --url smtp://email-smtp.eu-west-3.amazonaws.com:587 --user "AK*****:*************" --mail-from 'noreply@wikimusic.jointhefreeworld.org' --mail-rcpt 'jjbigorra@gmail.com' --mail-rcpt-allowfails --upload-file tmp/998c42eb-7472-4e12-aa5a-ffdbe754b430-noreply@wikimusic.jointhefreeworld.org-jjbigorra@gmail.com
+
+% Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0* Host email-smtp.eu-west-3.amazonaws.com:587 was resolved.
+* IPv6: (none)
+* IPv4: 15.236.217.177, 15.236.68.209, 15.237.2.166
+*   Trying 15.236.217.177:587...
+* Connected to email-smtp.eu-west-3.amazonaws.com (15.236.217.177) port 587
+< 220 email-smtp.amazonaws.com ESMTP SimpleEmailService-d-I
+> EHLO 998c42eb-7472-4e12-aa5a-ffdbe754b430-noreply@wikimusic.jointhefreeworld.org-jjbigorra@gmail.com
+< 250-email-smtp.amazonaws.com
+< 250-8BITMIME
+< 250-STARTTLS
+< 250-AUTH PLAIN LOGIN
+< 250 Ok
+> STARTTLS
+< 220 Ready to start TLS
+.........................
+< 235 Authentication successful.
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0> MAIL FROM:<noreply@wikimusic.jointhefreeworld.org>
+< 250 Ok
+> RCPT TO:<jjbigorra@gmail.com>
+< 250 Ok
+> DATA
+< 354 End data with <CR><LF>.<CR><LF>q
+} [3028 bytes data]
+* We are completely uploaded and fine
+< 250 Ok 011301968c239ad5-72018cb8-ab51-42dd-8ea6-fd6395124272-000000
+100  3028    0     0  100  3028      0   5653 --:--:-- --:--:-- --:--:--  5649
+* Connection #0 to host email-smtp.eu-west-3.amazonaws.com left intact
 #+end_src
