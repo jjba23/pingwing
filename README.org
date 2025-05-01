@@ -38,6 +38,8 @@ You will need to specify some settings for pingwing to be able to start in ~env.
 (define pingwing-mail-access-port 587)
 #+end_src
 
+------
+
 ** Usage
 
 *** Fetch tasks
@@ -105,10 +107,20 @@ recipient object: object containing the recipient ~name~ and ~address~.
 
 -----
 
+
+-----
+
+** Useful tips
+
+It's recommended to run your SQLite database in WAL mode, for concurrent reads and writes. See the ~Makefile~ target ~init-db~
+
+------
+
 ** Details on how tasks are sent via e-mail
 
 After the task has submitted and picked up by the worker, a message like this will be produced:
 
+*** Produce mail message
 #+begin_src http
 MIME-Version: 1.0
 Subject: WikiMusic - Password Reset 998c42eb-7472-4e12-aa5a-ffdbe754b430
@@ -134,7 +146,9 @@ Content-Transfer-Encoding: quoted-printable
 --pingwing-message-multipart-boundary-33c2b557-7f27-4339-9a85-2385e7ecde9b--
 #+end_src
 
-And the worker will pick it up and send it:
+*** Send mail message via SMTP with curl
+
+And the worker will pick it up and send it (programatically for you):
 
 #+begin_src fundamental
 >>= sending mail to email-smtp.eu-west-3.amazonaws.com
@@ -144,10 +158,10 @@ curl --verbose --ssl-reqd --url smtp://email-smtp.eu-west-3.amazonaws.com:587 --
 % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0* Host email-smtp.eu-west-3.amazonaws.com:587 was resolved.
-* IPv6: (none)
-* IPv4: 15.236.217.177, 15.236.68.209, 15.237.2.166
-*   Trying 15.236.217.177:587...
-* Connected to email-smtp.eu-west-3.amazonaws.com (15.236.217.177) port 587
+ IPv6: (none)
+ IPv4: 15.236.217.177, 15.236.68.209, 15.237.2.166
+   Trying 15.236.217.177:587...
+ Connected to email-smtp.eu-west-3.amazonaws.com (15.236.217.177) port 587
 < 220 email-smtp.amazonaws.com ESMTP SimpleEmailService-d-I
 > EHLO 998c42eb-7472-4e12-aa5a-ffdbe754b430-noreply@wikimusic.jointhefreeworld.org-jjbigorra@gmail.com
 < 250-email-smtp.amazonaws.com
@@ -166,12 +180,9 @@ curl --verbose --ssl-reqd --url smtp://email-smtp.eu-west-3.amazonaws.com:587 --
 > DATA
 < 354 End data with <CR><LF>.<CR><LF>q
 } [3028 bytes data]
-* We are completely uploaded and fine
+ We are completely uploaded and fine
 < 250 Ok 011301968c239ad5-72018cb8-ab51-42dd-8ea6-fd6395124272-000000
 100  3028    0     0  100  3028      0   5653 --:--:-- --:--:-- --:--:--  5649
-* Connection #0 to host email-smtp.eu-west-3.amazonaws.com left intact
+ Connection #0 to host email-smtp.eu-west-3.amazonaws.com left intact
 #+end_src
 
-** Tipje van de sluier
-
-It's recommended to run your SQLite database in WAL mode, for concurrent reads and writes. See the ~Makefile~ target ~init-db~
