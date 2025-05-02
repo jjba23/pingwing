@@ -31,20 +31,19 @@
 
 (begin
   (define* (system-alert-html-template #:key system-name alert-value)
-    (let* (
-           (tree `((html (head ,meta-charset
+    (let* ((tree `((html (head ,meta-charset
                                ,meta-ie
                                ,meta-responsive
                                ,meta-color-scheme
                                ,meta-supported-color-schemes
                                (title ,(gettext "System Alert"))
                                (style ,mail-style))
-                         (body (h1 (span ,(gettext
-                                           "System Alert: "))
+                         (body (h1 (span ,(gettext "System Alert: "))
                                    (span ,system-name))
                                (p ,(gettext
                                     "An alert has been triggered from your system"))
-                               (hr (@ (style ,(->style '((margin-top . "1.4em") (margin-bottom . "1.4em"))))))
+                               (hr (@ (style ,(->style '((margin-top . "1.4em")
+                                                         (margin-bottom . "1.4em"))))))
                                (p ,alert-value)
                                ,mail-footer)))))
       (with-output-to-string (lambda ()

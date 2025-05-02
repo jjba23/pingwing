@@ -56,5 +56,6 @@
                           guile-uuid
                           guile-dbi
                           sqlite
+                          guile-curl
                           guile-dbd-sqlite3))
 

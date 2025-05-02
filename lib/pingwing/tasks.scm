@@ -29,11 +29,14 @@
   #:use-module (artanis db)
   #:use-module (artanis ssql)
   #:use-module (srfi srfi-64)
-  #:use-module (pingwing process)
+  #:use-module (curl)
+  #:use-module (web response)
   #:use-module (pingwing base64)
   #:use-module (pingwing templates password-reset)
   #:use-module (pingwing templates system-alert)
   #:use-module (pingwing query-escape)
+  #:use-module (ice-9 pretty-print)
+  #:use-module (rnrs bytevectors)
   #:use-module (app models task))
 
 (define* (pingwing-send-mail #:key id
@@ -56,17 +59,16 @@
          (_ (with-output-to-file the-file
               (lambda ()
                 (display (string-join `("MIME-Version: 1.0" ,(format #f
-                                                                     "Subject: ~a ~a"
-                                                                     subject id
-                                                                     )
+                                                              "Subject: ~a ~a"
+                                                              subject id)
                                         ,(format #f "From: ~a <~a>" from-name
                                                  from-address)
                                         ,(format #f "To: ~a <~a>" to-name
                                                  to-address)
                                         ;; TODO reply-to, cc, bcc
                                         ,(format #f
-                                                 "Content-Type: multipart/alternative; boundary=\"~a\""
-                                                 multipart-boundary)
+                                          "Content-Type: multipart/alternative; boundary=\"~a\""
+                                          multipart-boundary)
                                         ""
                                         ,(format #f "--~a" multipart-boundary)
                                         "Content-Type: text/plain; charset=\"UTF-8\""
@@ -83,25 +85,37 @@
                                         ""
                                         ,(format #f "--~a--"
                                                  multipart-boundary)) "\n")))))
-         (cmd (format #f
-                      (string-join '("curl --verbose --ssl-reqd"
-                                     "--url smtp://~a:~a"
-                                     "--user \"~a:~a\""
-                                     "--mail-from '~a'"
-                                     "--mail-rcpt '~a'"
-                                     "--mail-rcpt-allowfails"
-                                     "--upload-file ~a") " ")
-                      access-server
-                      access-port
-                      access-key
-                      access-secret
-                      from-address
-                      to-address
-                      the-file)))
-    (log-separator)
-    (log-info (format #f "sending mail to ~a\n" access-server))
-    (display cmd)
-    (syscall cmd)))
+         (file-port (open-input-file the-file))
+         (handle (curl-easy-init))
+         (_ (begin
+              (curl-easy-setopt handle
+                                'url
+                                (format #f "smtp://~a:~a" access-server
+                                        access-port))
+              (curl-easy-setopt handle
+                                'verbose #t)
+              (curl-easy-setopt handle
+                                'use-ssl 1)
+              (curl-easy-setopt handle
+                                'username access-key)
+              (curl-easy-setopt handle
+                                'password access-secret)
+              (curl-easy-setopt handle
+                                'mail-from from-address)
+              (curl-easy-setopt handle
+                                'mail-rcpt
+                                (list to-address))
+              (curl-easy-setopt handle
+                                'readdata file-port)
+              (curl-easy-setopt handle
+                                'upload #t)))
+         (r (curl-easy-perform handle #t))
+         (rr (catch #t
+                    (lambda ()
+                      (bytevector->string r "utf-8"))
+                    (lambda (key . args)
+                      r))))
+    (display rr)))
 
 (define* (body-from-task #:key task)
   (let* ((v (json-string->scm (unescape-str (assoc-ref task "template_vars")))))
