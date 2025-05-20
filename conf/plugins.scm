@@ -1,19 +1,19 @@
-;;; byggsteg - the CI/CD orchestrator written in Guile Scheme
+;;; pingwing
 
-;; Copyright © 2025 "Josep Bigorra" known as "jjba23" <jjbigorra@gmail.com>
+;; Copyright © Josep Bigorra <jjbigorra@gmail.com>
 
-;; byggsteg is free software: you can redistribute it and/or modify
+;; pingwing is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU Affero General Public License as published by
 ;; the Free Software Foundation, either version 3 of the License, or
 ;; (at your option) any later version.
 
-;; byggsteg is distributed in the hope that it will be useful,
+;; pingwing is distributed in the hope that it will be useful,
 ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;; GNU Affero General Public License for more details.
 
 ;; You should have received a copy of the GNU Affero General Public License
-;; along with byggsteg.  If not, see <https://www.gnu.org/licenses/>
+;; along with pingwing.  If not, see <https://www.gnu.org/licenses/>
 
 ;; This is a plugin configuration file, don't remove it!
 
