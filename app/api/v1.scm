@@ -19,8 +19,8 @@
 
 (import (uuid generate)
         (json)
-        (ice-9 iconv))
-(import (app models task)
+        (ice-9 iconv)
+        (app models task)
         (pingwing query-escape))
 
 (get "/api/v1/tasks"
