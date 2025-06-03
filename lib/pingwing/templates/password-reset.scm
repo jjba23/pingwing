@@ -43,12 +43,12 @@
                                (p ,(gettext
                                     "We have received a request to reset the password for your user account:"))
                                (table (@ (style ,(mk-style '((margin-top . "1.6em")
-                                                            (margin-bottom . "1.6em")))))
+                                                             (margin-bottom . "1.6em")))))
                                       (tr (td ,(gettext "User:"))
                                           (td ,user)))
 
                                (hr (@ (style ,(mk-style '((margin-top . "1.4em")
-                                                         (margin-bottom . "1.4em"))))))
+                                                          (margin-bottom . "1.4em"))))))
                                (a (@ (class . "button-link")
                                      (href unquote reset-link))
                                   ,(gettext "🔗 Reset your password on ")

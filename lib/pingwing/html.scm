@@ -44,7 +44,8 @@
             (content . "light dark"))))
 
 (define-public mail-footer
-  `((hr (@ (style ,(mk-style '((margin-top . "1.6em") (margin-bottom . "1.6em"))))))
+  `((hr (@ (style ,(mk-style '((margin-top . "1.6em")
+                               (margin-bottom . "1.6em"))))))
     (p (small (em ,(gettext
                     "this e-mail was powered by pingwing - the free and open Lisp-powered notification nexus"))))
     (p (a (@ (href . "https://codeberg.org/jjba23/pingwing"))
