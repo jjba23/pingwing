@@ -15,13 +15,79 @@
 ;; You should have received a copy of the GNU Affero General Public License
 ;; along with pingwing.  If not, see <https://www.gnu.org/licenses/>.
 
-
-(define-module (byggsteg sqlite job)
+(define-module (pingwing sqlite task)
   #:declarative? #t
   #:use-module (srfi srfi-9)
   #:use-module (kracht prelude)
   #:use-module (artanis db)
-  #:use-module (byggsteg sqlite util)
-  #:use-module (byggsteg domain job)
-  #:export (make-sqlite-job-repository))
+  #:use-module (pingwing sqlite util)
+  #:use-module (pingwing domain task)
+  #:export (make-sqlite-task-repository))
+
+;; --- SQLite implementation ---
+(define (make-sqlite-task-repository rc)
+  (define columns
+    '(id task-status
+         task-type
+         template
+         template-vars
+         sender-name
+         sender-address
+         subject
+         recipients
+         created-at
+         updated-at
+         attempts))
+
+  (define insert-columns
+    '(id task-status
+         task-type
+         template
+         template-vars
+         sender-name
+         sender-address
+         subject
+         recipients
+         created-at
+         attempts))
+
+  (define (get-next-pending-task)
+    (let* ((query (format #f "SELECT ~a FROM task WHERE id = ~a LIMIT 1"
+                          (symbols->sql-columns-list columns)
+                          (value->sql-literal id)))
+           (_ (log-info "get-task-by-id query:\n\t~a\n" query))
+           (rows (map sql-row->scheme-alist
+                      (DB-get-all-rows (DB-query (DB-open rc) query))))
+           (_ (log-info "get-task-by-id rows: ~a\n"
+                        (length rows))))
+      (if (nil? rows) #f
+          (car rows))))
+
+  (define (delete-task-by-id id)
+    (let* ((query (format #f "DELETE FROM task WHERE id = ~a"
+                          (value->sql-literal id)))
+           (_ (log-info "delete-task-by-id query:\n\t~a\n" query)))
+      (DB-query (DB-open rc) query)))
+
+  (define (update-task-by-id id attrs)
+    (let* ((query (format #f "UPDATE task SET ~a WHERE id = ~a"
+                          (string-join (map pair->sql-assignment attrs) ", ")
+                          (value->sql-literal id)))
+           (_ (log-info "update-task-by-id query:\n\t~a\n" query)))
+      (DB-query (DB-open rc) query)))
+
+  (define (insert-task attrs)
+    (let* ((vals (map (lambda (x)
+                        (value->sql-literal (assq-ref attrs x)))
+                      insert-columns))
+           (query (format #f "INSERT INTO task (~a) VALUES (~a)"
+                          (symbols->sql-columns-list insert-columns)
+                          (string-join vals ", ")))
+           (_ (log-info "insert-task query:\n\t~a\n" query)))
+      (DB-query (DB-open rc) query)))
+
+  (mk-task-repository #:get-next-pending-task-proc get-next-pending-task
+                      #:update-task-by-id update-task-by-id
+                      #:insert-task-proc insert-task
+                      #:delete-task-by-id-proc delete-task-by-id))
 
