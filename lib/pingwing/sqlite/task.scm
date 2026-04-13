@@ -24,3 +24,4 @@
   #:use-module (byggsteg sqlite util)
   #:use-module (byggsteg domain job)
   #:export (make-sqlite-job-repository))
+
