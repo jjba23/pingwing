@@ -77,5 +77,3 @@ init-db:
 # Development REPL
 repl:
 	guix shell -m manifest.scm -- guile --fresh-auto-compile -L ./lib/ -c '((@ (ares server) run-nrepl-server))'
-
-
