@@ -37,7 +37,9 @@
   #:use-module (pingwing query-escape)
   #:use-module (ice-9 pretty-print)
   #:use-module (rnrs bytevectors)
-  #:use-module (app models task))
+  #:use-module (app models task)
+  #:use-module (pingwing sqlite task)
+  #:use-module (pingwing domain task))
 
 (define* (pingwing-send-mail #:key id
                              access-key
