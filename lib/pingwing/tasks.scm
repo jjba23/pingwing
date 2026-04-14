@@ -234,18 +234,15 @@
                                      (display (format #f
                                                "\nerror processing task: ~a ~a"
                                                key args)))))
-           ;; (when (not (nil? task))
-           ;; (catch #t
-           ;; (lambda ()
-           ;; (pingwing-task-processor #:task task
-           ;; #:pingwing-settings
-           ;; pingwing-settings))
-           ;; exception-handler))
            
-           (when (not (nil? task))
-             (pingwing-task-processor #:rc rc
-                                      #:task task
-                                      #:pingwing-settings pingwing-settings))
+           (catch #t
+                  (lambda ()
+                    (when (not (nil? task))
+                      (pingwing-task-processor #:rc rc
+                                               #:task task
+                                               #:pingwing-settings
+                                               pingwing-settings)))
+                  exception-handler)
 
            (sleep (assoc-ref (assoc-ref pingwing-settings
                                         'pingwing)
