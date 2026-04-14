@@ -31,12 +31,14 @@
   #:use-module (srfi srfi-64)
   #:use-module (curl)
   #:use-module (web response)
+  #:use-module (kracht prelude)
   #:use-module (pingwing base64)
   #:use-module (pingwing templates password-reset)
   #:use-module (pingwing templates system-alert)
   #:use-module (pingwing query-escape)
   #:use-module (ice-9 pretty-print)
   #:use-module (rnrs bytevectors)
+  #:use-module (rnrs io ports)
   #:use-module (app models task)
   #:use-module (pingwing sqlite task)
   #:use-module (pingwing domain task))
@@ -175,15 +177,8 @@
                       #:body (body-from-task #:task task)
                       #:body-html (html-body-from-task #:task task)))
 
-(define (log-separator)
-  (display "\n========================"))
-
-(define (log-info msg)
-  (display (format #f "\n>>= ~a\n" msg)))
-
 (define* (pingwing-task-processor #:key task pingwing-settings)
   (let ((conn (get-conn-from-pool!)))
-    (log-separator)
     (log-info (gettext "processing pingwing task"))
     (for-each (lambda (recipient)
                 (do-send-mail #:recipient recipient
@@ -200,7 +195,6 @@
     (DB-close conn)))
 
 (define-public (pingwing-worker-thread pingwing-settings)
-  (log-separator)
   (log-info (gettext "initializing pingwing queue worker"))
 
   (use-modules (pingwing tasks)
@@ -212,11 +206,24 @@
          (lambda (key . args)
            '()))
 
+  ;; define dummy route so that fake request-context can be used
+  (post "/dummy-pipeline-context"
+        (lambda (rc)
+          "dummy"))
+
   (while #t
-         (let* ((next-task ($task 'get
-                                  #:ret 1
-                                  #:condition (where #:task_status "pending")
-                                  #:order-by "created_at ASC"))
+         (let* (;; use dummy route so as to hook into Artanis request context
+                 (mock-port (open-bytevector-input-port #vu8()))
+                (mock-request (build-request (string->uri
+                                              "http://localhost:50077/dummy-pipeline-context")
+                                             #:method 'POST
+                                             #:headers '()
+                                             #:port mock-port))
+                (mock-body (read-request-body mock-request))
+                ;; fake request context will be used to get DB connection
+                (rc (new-route-context mock-request mock-body))
+                (task-repo (make-sqlite-task-repository rc))
+                (task (get-next-pending-task task-repo))
                 (exception-handler (lambda (key . args)
                                      (display (format #f
                                                "\nerror processing task: ~a ~a"
@@ -224,7 +231,7 @@
            (when (eq? (length next-task) 1)
              (catch #t
                     (lambda ()
-                      (pingwing-task-processor #:task (car next-task)
+                      (pingwing-task-processor #:task task
                                                #:pingwing-settings
                                                pingwing-settings))
                     exception-handler))

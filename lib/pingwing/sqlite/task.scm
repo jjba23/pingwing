@@ -52,13 +52,14 @@
          attempts))
 
   (define (get-next-pending-task)
-    (let* ((query (format #f "SELECT ~a FROM task WHERE id = ~a LIMIT 1"
-                          (symbols->sql-columns-list columns)
-                          (value->sql-literal id)))
-           (_ (log-info "get-task-by-id query:\n\t~a\n" query))
+    (let* ((query (format #f
+                   "SELECT ~a FROM task WHERE task_status = 'pending'
+                    ORDER BY created_at ASC LIMIT 1"
+                   (symbols->sql-columns-list columns)))
+           (_ (log-info "get-next-pending-task query:\n\t~a\n" query))
            (rows (map sql-row->scheme-alist
                       (DB-get-all-rows (DB-query (DB-open rc) query))))
-           (_ (log-info "get-task-by-id rows: ~a\n"
+           (_ (log-info "get-next-pending-task rows: ~a\n"
                         (length rows))))
       (if (nil? rows) #f
           (car rows))))
