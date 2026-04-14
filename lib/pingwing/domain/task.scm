@@ -19,7 +19,7 @@
   #:declarative? #t
   #:use-module (pingwing domain repo)
   #:use-module (srfi srfi-9)
-  #:export (get-next-pending-task insert-task delete-task-by-id update-task))
+  #:export (get-next-pending-task insert-task delete-task-by-id update-task-by-id))
 
 ;; -- Record definition ---
 

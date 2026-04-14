@@ -143,8 +143,10 @@
       (_ #f))))
 
 (define* (html-body-from-task #:key task)
-  (let* ((v (json-string->scm (unescape-str (assq-ref task 'template-vars)))))
-    (match (string->symbol (assq-ref task 'template))
+  (let* ((v (json-string->scm (unescape-str (assq-ref task
+                                                      'template-vars)))))
+    (match (string->symbol (assq-ref task
+                                     'template))
       ('password-reset (password-reset-html-template #:system-name (assoc-ref
                                                                     v
                                                                     "system-name")
@@ -184,8 +186,8 @@
                       #:body (body-from-task #:task task)
                       #:body-html (html-body-from-task #:task task)))
 
-(define* (pingwing-task-processor #:key task pingwing-settings)
-  (let ((conn (get-conn-from-pool!)))
+(define* (pingwing-task-processor #:key rc task pingwing-settings)
+  (let ((task-repo (make-sqlite-task-repository rc)))
     (log-info (gettext "processing pingwing task"))
     (for-each (lambda (recipient)
                 (do-send-mail #:recipient recipient
@@ -193,14 +195,11 @@
                               #:task task))
               (vector->list (json-string->scm (unescape-str (assq-ref task
                                                                       'recipients)))))
-    (DB-query conn
-              (->sql update
-                     'tasks set
-                     `((task_status complete)
-                       (updated_at ,(current-time)))
-                     (where #:id (assq-ref task
-                                           'id))))
-    (DB-close conn)))
+    (update-task-by-id task-repo
+                       (assq-ref task
+                                 'id)
+                       `((task-status . complete) (updated-at unquote
+                                                              (current-time))))))
 
 (define-public (pingwing-worker-thread pingwing-settings)
   (log-info (gettext "initializing pingwing queue worker"))
@@ -244,7 +243,8 @@
            ;; exception-handler))
            
            (when (not (nil? task))
-             (pingwing-task-processor #:task task
+             (pingwing-task-processor #:rc rc
+                                      #:task task
                                       #:pingwing-settings pingwing-settings))
 
            (sleep (assoc-ref (assoc-ref pingwing-settings
