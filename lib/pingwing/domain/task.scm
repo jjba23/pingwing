@@ -19,16 +19,16 @@
   #:declarative? #t
   #:use-module (pingwing domain repo)
   #:use-module (srfi srfi-9)
-  #:export (get-next-pending-task insert-task delete-task-by-id))
+  #:export (get-next-pending-task insert-task delete-task-by-id update-task))
 
 ;; -- Record definition ---
 
 (define-record-with-kw (<task-repository> %make-task-repository
                                           task-repository?)
                        mk-task-repository
-                       (get-next-pending-task-proc repo-get-tasks-in-progress)
+                       (get-next-pending-task-proc repo-get-next-pending-task)
                        (insert-task-proc repo-insert-task)
-                       (update-task-proc repo-update-task)
+                       (update-task-by-id-proc repo-update-task-by-id)
                        (delete-task-by-id-proc repo-delete-task-by-id))
 
 ;; --- eDSL: Embedded Domain Specific Language ---
@@ -39,8 +39,8 @@
 (define-repo-method insert-task repo-insert-task
                     "Inserts a task with ATTRS in the given REPO.")
 
-(define-repo-method update-task repo-update-task
-                    "Updates a task with ATTRS in the given REPO.")
+(define-repo-method update-task-by-id repo-update-task-by-id
+                    "Updates a task by ID with ATTRS in the given REPO.")
 
 (define-repo-method delete-task-by-id repo-delete-task-by-id
                     "Deletes a task identified by ID in the given REPO.")

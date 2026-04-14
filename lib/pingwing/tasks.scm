@@ -39,7 +39,9 @@
   #:use-module (ice-9 pretty-print)
   #:use-module (rnrs bytevectors)
   #:use-module (rnrs io ports)
-  #:use-module (app models task)
+  #:use-module (artanis artanis)
+  #:use-module (web request)
+  #:use-module (web uri)
   #:use-module (pingwing sqlite task)
   #:use-module (pingwing domain task))
 
@@ -122,8 +124,10 @@
     (display rr)))
 
 (define* (body-from-task #:key task)
-  (let* ((v (json-string->scm (unescape-str (assoc-ref task "template_vars")))))
-    (match (string->symbol (assoc-ref task "template"))
+  (let* ((v (json-string->scm (unescape-str (assq-ref task
+                                                      'template-vars)))))
+    (match (string->symbol (assq-ref task
+                                     'template))
       ('password-reset (password-reset-plain-template #:system-name (assoc-ref
                                                                      v
                                                                      "system-name")
@@ -139,8 +143,8 @@
       (_ #f))))
 
 (define* (html-body-from-task #:key task)
-  (let* ((v (json-string->scm (unescape-str (assoc-ref task "template_vars")))))
-    (match (string->symbol (assoc-ref task "template"))
+  (let* ((v (json-string->scm (unescape-str (assq-ref task 'template-vars)))))
+    (match (string->symbol (assq-ref task 'template))
       ('password-reset (password-reset-html-template #:system-name (assoc-ref
                                                                     v
                                                                     "system-name")
@@ -155,7 +159,8 @@
       (_ #f))))
 
 (define* (do-send-mail #:key task recipient pingwing-settings)
-  (pingwing-send-mail #:id (assoc-ref task "id")
+  (pingwing-send-mail #:id (assq-ref task
+                                     'id)
                       #:access-key (assoc-ref (assoc-ref pingwing-settings
                                                          'mail)
                                               'access-key)
@@ -168,12 +173,14 @@
                       #:access-port (assoc-ref (assoc-ref pingwing-settings
                                                           'mail)
                                                'access-port)
-                      #:from-name (unescape-str (assoc-ref task "sender_name"))
-                      #:from-address (unescape-str (assoc-ref task
-                                                    "sender_address"))
+                      #:from-name (unescape-str (assq-ref task
+                                                          'sender-name))
+                      #:from-address (unescape-str (assq-ref task
+                                                             'sender-address))
                       #:to-name (assoc-ref recipient "name")
                       #:to-address (assoc-ref recipient "address")
-                      #:subject (assoc-ref task "subject")
+                      #:subject (assq-ref task
+                                          'subject)
                       #:body (body-from-task #:task task)
                       #:body-html (html-body-from-task #:task task)))
 
@@ -184,21 +191,21 @@
                 (do-send-mail #:recipient recipient
                               #:pingwing-settings pingwing-settings
                               #:task task))
-              (vector->list (json-string->scm (unescape-str (assoc-ref task
-                                                             "recipients")))))
+              (vector->list (json-string->scm (unescape-str (assq-ref task
+                                                                      'recipients)))))
     (DB-query conn
               (->sql update
-                     'task set
+                     'tasks set
                      `((task_status complete)
                        (updated_at ,(current-time)))
-                     (where #:id (assoc-ref task "id"))))
+                     (where #:id (assq-ref task
+                                           'id))))
     (DB-close conn)))
 
 (define-public (pingwing-worker-thread pingwing-settings)
   (log-info (gettext "initializing pingwing queue worker"))
 
-  (use-modules (pingwing tasks)
-               (app models task))
+  (use-modules (pingwing tasks))
 
   (catch #t
          (lambda ()
@@ -212,7 +219,7 @@
           "dummy"))
 
   (while #t
-         (let* (;; use dummy route so as to hook into Artanis request context
+         (let* ( ;use dummy route so as to hook into Artanis request context
                  (mock-port (open-bytevector-input-port #vu8()))
                 (mock-request (build-request (string->uri
                                               "http://localhost:50077/dummy-pipeline-context")
@@ -228,13 +235,17 @@
                                      (display (format #f
                                                "\nerror processing task: ~a ~a"
                                                key args)))))
-           (when (eq? (length next-task) 1)
-             (catch #t
-                    (lambda ()
-                      (pingwing-task-processor #:task task
-                                               #:pingwing-settings
-                                               pingwing-settings))
-                    exception-handler))
+           ;; (when (not (nil? task))
+           ;; (catch #t
+           ;; (lambda ()
+           ;; (pingwing-task-processor #:task task
+           ;; #:pingwing-settings
+           ;; pingwing-settings))
+           ;; exception-handler))
+           
+           (when (not (nil? task))
+             (pingwing-task-processor #:task task
+                                      #:pingwing-settings pingwing-settings))
 
            (sleep (assoc-ref (assoc-ref pingwing-settings
                                         'pingwing)

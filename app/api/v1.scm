@@ -20,55 +20,9 @@
 (import (uuid generate)
         (json)
         (ice-9 iconv)
-        (app models task)
+        (pingwing domain task)
+        (pingwing sqlite task)
         (pingwing query-escape))
-
-(get "/api/v1/tasks"
-     #:mime 'json
-     (lambda (rc)
-       (let* ((tasks ($task 'get
-                            #:order-by "created_at DESC"))
-              (formatted-tasks (map (lambda (t)
-                                      `((id unquote
-                                            (assoc-ref t "id"))
-                                        (task-status unquote
-                                                     (unescape-str (assoc-ref
-                                                                    t
-                                                                    "task_status")))
-                                        (task-type unquote
-                                                   (unescape-str (assoc-ref t
-                                                                  "task_type")))
-                                        (template unquote
-                                                  (unescape-str (assoc-ref t
-                                                                 "template")))
-                                        (template-vars unquote
-                                                       (json-string->scm (unescape-str
-                                                                          (assoc-ref
-                                                                           t
-                                                                           "template_vars"))))
-                                        (sender-name unquote
-                                                     (unescape-str (assoc-ref
-                                                                    t
-                                                                    "sender_name")))
-                                        (sender-address unquote
-                                                        (unescape-str (assoc-ref
-                                                                       t
-                                                                       "sender_address")))
-                                        (subject unquote
-                                                 (unescape-str (assoc-ref t
-                                                                "subject")))
-                                        (recipients unquote
-                                                    (json-string->scm (unescape-str
-                                                                       (assoc-ref
-                                                                        t
-                                                                        "recipients"))))
-                                        (created-at unquote
-                                                    (assoc-ref t "created_at"))
-                                        (updated-at unquote
-                                                    (assoc-ref t "updated_at"))))
-                                    tasks)))
-         (:mime rc
-                (list->vector formatted-tasks)))))
 
 (post "/api/v1/tasks"
       #:mime 'json
@@ -80,32 +34,39 @@
                         (b (json-string->scm raw-b))
                         (uid (generate-string-uuid))
                         (now (current-time))
-                        (message (format #f
-                                  "successfully saved task to pingwing system")))
-                   ($task 'set
-                          #:id uid
-                          #:task_status 'pending
-                          #:task_type (assoc-ref b "task-type")
-                          #:template (escape-str (assoc-ref b "template"))
-                          #:template_vars (escape-str (scm->json-string (assoc-ref
-                                                                         b
-                                                                         "template-vars")))
-                          #:sender_name (escape-str (assoc-ref b "sender-name"))
-                          #:sender_address (escape-str (assoc-ref b
-                                                        "sender-address"))
-                          #:subject (escape-str (assoc-ref b "subject"))
-                          #:recipients (escape-str (scm->json-string (assoc-ref
-                                                                      b
-                                                                      "recipients")))
-                          #:created_at now)
+                        (task-repo (make-sqlite-task-repository rc)))
+                   
+                   (insert-task task-repo
+                                `((id unquote uid)
+                                  (task-status . pending)
+                                  (task-type unquote
+                                             (assoc-ref b "task-type"))
+                                  (template unquote (escape-str (assoc-ref b
+                                                                   "template")))
+                                  (template-vars unquote (escape-str (scm->json-string
+                                                              (assoc-ref b
+                                                               "template-vars"))))
+                                  (sender-name unquote
+                                               (escape-str (assoc-ref b
+                                                            "sender-name")))
+                                  (sender-address unquote
+                                                  (escape-str (assoc-ref b
+                                                               "sender-address")))
+                                  (subject unquote
+                                           (escape-str (assoc-ref b "subject")))
+                                  (recipients unquote
+                                              (escape-str (scm->json-string (assoc-ref
+                                                                             b
+                                                                             "recipients"))))
+                                  (created-at unquote now)))
                    (:mime rc
-                          `((message unquote message)))))
+                          `((message . "successfully saved task to pingwing system")))))
                (lambda (key . args)
-                 (let* ((message (format #f
-                                  "error saving task in pingwing system: ~a ~a"
-                                  key args)))
-                   (display message)
+                 (let* ((error-message (format #f
+                                        "error saving task in pingwing system: ~a ~a"
+                                        key args)))
+                   (display error-message)
                    (http-status 500
                                 (lambda ()
                                   (:mime rc
-                                         `((message unquote message))))))))))
+                                         `((message unquote error-message))))))))))

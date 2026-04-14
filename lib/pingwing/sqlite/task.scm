@@ -53,7 +53,7 @@
 
   (define (get-next-pending-task)
     (let* ((query (format #f
-                   "SELECT ~a FROM task WHERE task_status = 'pending'
+                   "SELECT ~a FROM tasks WHERE task_status = 'pending'
                     ORDER BY created_at ASC LIMIT 1"
                    (symbols->sql-columns-list columns)))
            (_ (log-info "get-next-pending-task query:\n\t~a\n" query))
@@ -65,13 +65,13 @@
           (car rows))))
 
   (define (delete-task-by-id id)
-    (let* ((query (format #f "DELETE FROM task WHERE id = ~a"
+    (let* ((query (format #f "DELETE FROM tasks WHERE id = ~a"
                           (value->sql-literal id)))
            (_ (log-info "delete-task-by-id query:\n\t~a\n" query)))
       (DB-query (DB-open rc) query)))
 
   (define (update-task-by-id id attrs)
-    (let* ((query (format #f "UPDATE task SET ~a WHERE id = ~a"
+    (let* ((query (format #f "UPDATE tasks SET ~a WHERE id = ~a"
                           (string-join (map pair->sql-assignment attrs) ", ")
                           (value->sql-literal id)))
            (_ (log-info "update-task-by-id query:\n\t~a\n" query)))
@@ -81,14 +81,14 @@
     (let* ((vals (map (lambda (x)
                         (value->sql-literal (assq-ref attrs x)))
                       insert-columns))
-           (query (format #f "INSERT INTO task (~a) VALUES (~a)"
+           (query (format #f "INSERT INTO tasks (~a) VALUES (~a)"
                           (symbols->sql-columns-list insert-columns)
                           (string-join vals ", ")))
            (_ (log-info "insert-task query:\n\t~a\n" query)))
       (DB-query (DB-open rc) query)))
 
   (mk-task-repository #:get-next-pending-task-proc get-next-pending-task
-                      #:update-task-by-id update-task-by-id
+                      #:update-task-by-id-proc update-task-by-id
                       #:insert-task-proc insert-task
                       #:delete-task-by-id-proc delete-task-by-id))
 
