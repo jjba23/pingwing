@@ -51,9 +51,11 @@
          created-at
          attempts))
 
+  (define conn
+    (DB-open rc))
+
   (define (get-next-pending-task)
-    (let* ((conn (get-conn-from-pool!))
-           (query (format #f
+    (let* ((query (format #f
                    "SELECT ~a FROM tasks WHERE task_status = 'pending'
                     ORDER BY created_at ASC LIMIT 1"
                    (symbols->sql-columns-list columns)))
@@ -61,41 +63,34 @@
            (rows (map sql-row->scheme-alist
                       (DB-get-all-rows (DB-query conn query))))
            (_ (log-info "get-next-pending-task rows: ~a\n"
-                        (length rows)))
-           (_ (DB-close conn)))
+                        (length rows))))
       (if (nil? rows) #f
           (car rows))))
 
   (define (delete-task-by-id id)
-    (let* ((conn (get-conn-from-pool!))
-           (query (format #f "DELETE FROM tasks WHERE id = ~a"
+    (let* ((query (format #f "DELETE FROM tasks WHERE id = ~a"
                           (value->sql-literal id)))
            (_ (log-info "delete-task-by-id query:\n\t~a\n" query))
-           (r (DB-query conn query))
-           (_ (DB-close conn)))
+           (r (DB-query conn query)))
       r))
 
   (define (update-task-by-id id attrs)
-    (let* ((conn (get-conn-from-pool!))
-           (query (format #f "UPDATE tasks SET ~a WHERE id = ~a"
+    (let* ((query (format #f "UPDATE tasks SET ~a WHERE id = ~a"
                           (string-join (map pair->sql-assignment attrs) ", ")
                           (value->sql-literal id)))
            (_ (log-info "update-task-by-id query:\n\t~a\n" query))
-           (r (DB-query conn query))
-           (_ (DB-close conn)))
+           (r (DB-query conn query)))
       r))
 
   (define (insert-task attrs)
-    (let* ((conn (get-conn-from-pool!))
-           (vals (map (lambda (x)
+    (let* ((vals (map (lambda (x)
                         (value->sql-literal (assq-ref attrs x)))
                       insert-columns))
            (query (format #f "INSERT INTO tasks (~a) VALUES (~a)"
                           (symbols->sql-columns-list insert-columns)
                           (string-join vals ", ")))
            (_ (log-info "insert-task query:\n\t~a\n" query))
-           (r (DB-query conn query))
-           (_ (DB-close conn)))
+           (r (DB-query conn query)))
       r))
 
   (mk-task-repository #:get-next-pending-task-proc get-next-pending-task
