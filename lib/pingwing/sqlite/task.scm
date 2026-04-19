@@ -61,8 +61,8 @@
            (rows (map sql-row->scheme-alist
                       (DB-get-all-rows (DB-query conn query))))
            (_ (log-info "get-next-pending-task rows: ~a\n"
-                        (length rows))))
-      (DB-close conn)
+                        (length rows)))
+           (_ (DB-close conn)))
       (if (nil? rows) #f
           (car rows))))
 
@@ -71,8 +71,9 @@
            (query (format #f "DELETE FROM tasks WHERE id = ~a"
                           (value->sql-literal id)))
            (_ (log-info "delete-task-by-id query:\n\t~a\n" query))
-           (r (DB-query conn query)))
-      (DB-close conn) r))
+           (r (DB-query conn query))
+           (_ (DB-close conn)))
+      r))
 
   (define (update-task-by-id id attrs)
     (let* ((conn (DB-open rc))
@@ -80,8 +81,9 @@
                           (string-join (map pair->sql-assignment attrs) ", ")
                           (value->sql-literal id)))
            (_ (log-info "update-task-by-id query:\n\t~a\n" query))
-           (r (DB-query conn query)))
-      (DB-close conn) r))
+           (r (DB-query conn query))
+           (_ (DB-close conn)))
+      r))
 
   (define (insert-task attrs)
     (let* ((conn (DB-open rc))
@@ -92,8 +94,9 @@
                           (symbols->sql-columns-list insert-columns)
                           (string-join vals ", ")))
            (_ (log-info "insert-task query:\n\t~a\n" query))
-           (r (DB-query conn query)))
-      (DB-close conn) r))
+           (r (DB-query conn query))
+           (_ (DB-close conn)))
+      r))
 
   (mk-task-repository #:get-next-pending-task-proc get-next-pending-task
                       #:update-task-by-id-proc update-task-by-id
