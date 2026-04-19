@@ -2,11 +2,18 @@
 
 ;; This an Artanis ENTRY file, don't remove it!
 
+(add-to-load-path (string-append (current-toplevel) "/lib"))
+
 (use-modules (artanis artanis)
              ;; Put modules you want to be imported here
              ;; only for this file, not controllers/views
              (ice-9 threads)
              (ice-9 i18n)
+             (web request)
+             (web uri)
+             (rnrs io ports)
+             (pingwing sqlite task)
+             (pingwing domain task)
              (artanis utils))
 ;; Put whatever you want to be called before server initilization here
 
@@ -23,7 +30,7 @@
                              woff
                              woff2
                              ttf))
-(add-to-load-path (string-append (current-toplevel) "/lib"))
+
 ;; Put whatever you want to be called before server running here
 
 ;; Specify the directory where the MO file is located
@@ -50,10 +57,31 @@
 ;; Procedure to start the pingwing queue worker to process jobs that haven't completed yet
 ;; this is preferrably done in a different thread
 (define (start-worker)
-  (use-modules (pingwing tasks))
-  (let* ((t (call-with-new-thread (lambda ()
-                                    (pingwing-worker-thread pingwing-settings)))))
+  (use-modules (pingwing tasks)
+               (pingwing sqlite task)
+               (pingwing domain task))
+  (let* ( ;use dummy route so as to hook into Artanis request context
+          (mock-port (open-bytevector-input-port #vu8()))
+         (mock-request (build-request (string->uri
+                                       "http://localhost:50077/dummy-pipeline-context")
+                                      #:method 'POST
+                                      #:headers '()
+                                      #:port mock-port))
+         (mock-body (read-request-body mock-request))
+         ;; fake request context will be used to get DB connection
+         (rc (new-route-context mock-request mock-body))
+         (task-repo (make-sqlite-task-repository rc))
+         (t (call-with-new-thread (lambda ()
+                                    (pingwing-worker-thread #:settings
+                                                            pingwing-settings
+                                                            #:task-repo
+                                                            task-repo)))))
     (set! worker-thread t)))
+
+;; define dummy route so that fake request-context can be used
+(post "/dummy-pipeline-context"
+      (lambda (rc)
+        "dummy"))
 
 ;; Add hook on before running the Artanis application to start the queue worker
 (run-before-run! start-worker)

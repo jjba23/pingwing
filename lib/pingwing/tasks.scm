@@ -43,7 +43,10 @@
   #:use-module (web request)
   #:use-module (web uri)
   #:use-module (pingwing sqlite task)
-  #:use-module (pingwing domain task))
+  #:use-module (pingwing domain task)
+  #:export (pingwing-send-mail pingwing-worker-thread pingwing-task-processor
+                               do-send-mail body-from-taqsk
+                               html-body-from-task))
 
 (define* (pingwing-send-mail #:key id
                              access-key
@@ -160,19 +163,19 @@
                                                                 "alert-value")))
       (_ #f))))
 
-(define* (do-send-mail #:key task recipient pingwing-settings)
+(define* (do-send-mail #:key task recipient settings)
   (pingwing-send-mail #:id (assq-ref task
                                      'id)
-                      #:access-key (assoc-ref (assoc-ref pingwing-settings
+                      #:access-key (assoc-ref (assoc-ref settings
                                                          'mail)
                                               'access-key)
-                      #:access-secret (assoc-ref (assoc-ref pingwing-settings
+                      #:access-secret (assoc-ref (assoc-ref settings
                                                             'mail)
                                                  'access-secret)
-                      #:access-server (assoc-ref (assoc-ref pingwing-settings
+                      #:access-server (assoc-ref (assoc-ref settings
                                                             'mail)
                                                  'access-server)
-                      #:access-port (assoc-ref (assoc-ref pingwing-settings
+                      #:access-port (assoc-ref (assoc-ref settings
                                                           'mail)
                                                'access-port)
                       #:from-name (unescape-str (assq-ref task
@@ -186,25 +189,22 @@
                       #:body (body-from-task #:task task)
                       #:body-html (html-body-from-task #:task task)))
 
-(define* (pingwing-task-processor #:key rc task pingwing-settings)
-  (let ((task-repo (make-sqlite-task-repository rc)))
-    (log-info (gettext "processing pingwing task"))
-    (for-each (lambda (recipient)
-                (do-send-mail #:recipient recipient
-                              #:pingwing-settings pingwing-settings
-                              #:task task))
-              (vector->list (json-string->scm (unescape-str (assq-ref task
-                                                                      'recipients)))))
-    (update-task-by-id task-repo
-                       (assq-ref task
-                                 'id)
-                       `((task-status . complete) (updated-at unquote
-                                                              (current-time))))))
+(define* (pingwing-task-processor #:key task-repo task settings)
+  (log-info (gettext "processing pingwing task"))
+  (for-each (lambda (recipient)
+              (do-send-mail #:recipient recipient
+                            #:settings settings
+                            #:task task))
+            (vector->list (json-string->scm (unescape-str (assq-ref task
+                                                                    'recipients)))))
+  (update-task-by-id task-repo
+                     (assq-ref task
+                               'id)
+                     `((task-status . complete) (updated-at unquote
+                                                            (current-time)))))
 
-(define-public (pingwing-worker-thread pingwing-settings)
+(define* (pingwing-worker-thread #:key task-repo settings)
   (log-info (gettext "initializing pingwing queue worker"))
-
-  (use-modules (pingwing tasks))
 
   (catch #t
          (lambda ()
@@ -212,24 +212,8 @@
          (lambda (key . args)
            '()))
 
-  ;; define dummy route so that fake request-context can be used
-  (post "/dummy-pipeline-context"
-        (lambda (rc)
-          "dummy"))
-
   (while #t
-         (let* ( ;use dummy route so as to hook into Artanis request context
-                 (mock-port (open-bytevector-input-port #vu8()))
-                (mock-request (build-request (string->uri
-                                              "http://localhost:50077/dummy-pipeline-context")
-                                             #:method 'POST
-                                             #:headers '()
-                                             #:port mock-port))
-                (mock-body (read-request-body mock-request))
-                ;; fake request context will be used to get DB connection
-                (rc (new-route-context mock-request mock-body))
-                (task-repo (make-sqlite-task-repository rc))
-                (task (get-next-pending-task task-repo))
+         (let* ((task (get-next-pending-task task-repo))
                 (exception-handler (lambda (key . args)
                                      (display (format #f
                                                "\nerror processing task: ~a ~a"
@@ -238,13 +222,12 @@
            (catch #t
                   (lambda ()
                     (when (not (nil? task))
-                      (pingwing-task-processor #:rc rc
+                      (pingwing-task-processor #:task-repo task-repo
                                                #:task task
-                                               #:pingwing-settings
-                                               pingwing-settings)))
+                                               #:settings settings)))
                   exception-handler)
 
-           (sleep (assoc-ref (assoc-ref pingwing-settings
+           (sleep (assoc-ref (assoc-ref settings
                                         'pingwing)
                              'worker-sleep-seconds)))))
 
