@@ -52,7 +52,7 @@
          attempts))
 
   (define (get-next-pending-task)
-    (let* ((conn (DB-open rc))
+    (let* ((conn (get-conn-from-pool!))
            (query (format #f
                    "SELECT ~a FROM tasks WHERE task_status = 'pending'
                     ORDER BY created_at ASC LIMIT 1"
@@ -67,7 +67,7 @@
           (car rows))))
 
   (define (delete-task-by-id id)
-    (let* ((conn (DB-open rc))
+    (let* ((conn (get-conn-from-pool!))
            (query (format #f "DELETE FROM tasks WHERE id = ~a"
                           (value->sql-literal id)))
            (_ (log-info "delete-task-by-id query:\n\t~a\n" query))
@@ -76,7 +76,7 @@
       r))
 
   (define (update-task-by-id id attrs)
-    (let* ((conn (DB-open rc))
+    (let* ((conn (get-conn-from-pool!))
            (query (format #f "UPDATE tasks SET ~a WHERE id = ~a"
                           (string-join (map pair->sql-assignment attrs) ", ")
                           (value->sql-literal id)))
@@ -86,7 +86,7 @@
       r))
 
   (define (insert-task attrs)
-    (let* ((conn (DB-open rc))
+    (let* ((conn (get-conn-from-pool!))
            (vals (map (lambda (x)
                         (value->sql-literal (assq-ref attrs x)))
                       insert-columns))
