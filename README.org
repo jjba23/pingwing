@@ -70,7 +70,7 @@ curl -v \
            "reset-link": "https://gnu.org"
          },
          "sender-name": "No Reply - WikiMusic",
-         "sender-address": "noreply@wikimusic.jointhefreeworld.org",
+         "sender-address": "noreply@mail.jointhefreeworld.org",
          "subject": "Wikimusic - Password Reset",
          "recipients": [
            {"name": "Josep Bigorra", "address": "jjbigorra@gmail.com"},

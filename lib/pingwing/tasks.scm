@@ -60,7 +60,7 @@
                              subject
                              body
                              body-html)
-  
+
   (let* ((unico (format #f "~a-~a-~a" id from-address to-address))
          (the-file (format #f "tmp/~a" unico))
          (multipart-boundary
@@ -105,6 +105,9 @@
                                 'verbose #t)
               (curl-easy-setopt handle
                                 'use-ssl 1)
+              (curl-easy-setopt handle
+                                      'cainfo
+                                      "/etc/ssl/certs/ca-certificates.crt")
               (curl-easy-setopt handle
                                 'username access-key)
               (curl-easy-setopt handle
@@ -218,7 +221,7 @@
                                      (display (format #f
                                                "\nerror processing task: ~a ~a"
                                                key args)))))
-           
+
            (catch #t
                   (lambda ()
                     (when (not (nil? task))
@@ -230,4 +233,3 @@
            (sleep (assoc-ref (assoc-ref settings
                                         'pingwing)
                              'worker-sleep-seconds)))))
-
