@@ -59,10 +59,10 @@
                    "SELECT ~a FROM tasks WHERE task_status = 'pending'
                     ORDER BY created_at ASC LIMIT 1"
                    (symbols->sql-columns-list columns)))
-           (_ (log-info "get-next-pending-task query:\n\t~a\n" query))
+           (_ (log-debug "get-next-pending-task query:\n\t~a\n" query))
            (rows (map sql-row->scheme-alist
                       (DB-get-all-rows (DB-query conn query))))
-           (_ (log-info "get-next-pending-task rows: ~a\n"
+           (_ (log-debug "get-next-pending-task rows: ~a\n"
                         (length rows))))
       (if (nil? rows) #f
           (car rows))))
@@ -97,4 +97,3 @@
                       #:update-task-by-id-proc update-task-by-id
                       #:insert-task-proc insert-task
                       #:delete-task-by-id-proc delete-task-by-id))
-
