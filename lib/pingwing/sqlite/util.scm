@@ -53,6 +53,15 @@
                   (cdr pair))) xs))
     (else xs)))
 
+;; A string that goes into SQL goes in between single quotes, so the one
+;; character that could end the literal early -- the quote itself -- is
+;; doubled, which is how SQLite reads it back as the character intended.  The
+;; values that reach here are already stripped of a user's quotes higher up;
+;; this is the belt to that pair of braces, since an error message written by
+;; a mail server can hold anything.
+(define (sql-quote-string s)
+  (format #f "'~a'" (string-replace-substring (format #f "~a" s) "'" "''")))
+
 (define (pair->sql-assignment a)
   (cond
     ((number? (cdr a))
@@ -67,9 +76,9 @@
           (cdr a))
      (format #f "~a = 0"
              (symbol->sql-column (car a))))
-    (else (format #f "~a = '~a'"
+    (else (format #f "~a = ~a"
                   (symbol->sql-column (car a))
-                  (cdr a)))))
+                  (sql-quote-string (cdr a))))))
 
 (define (value->sql-literal a)
   (cond
@@ -79,4 +88,4 @@
      "1")
     ((eq? #f a)
      "0")
-    (else (format #f "'~a'" a))))
+    (else (sql-quote-string a))))

@@ -27,60 +27,64 @@
   #:use-module (pingwing html)
   #:use-module (ice-9 string-fun)
   #:use-module (sxml simple)
-  #:use-module (ice-9 iconv))
+  #:use-module (ice-9 iconv)
+  #:export (password-reset-html-template password-reset-plain-template))
 
-(begin
-  (define* (password-reset-html-template #:key system-name user reset-link)
-    (let* ((tree `((html (head ,meta-charset
-                               ,meta-ie
-                               ,meta-responsive
-                               ,meta-color-scheme
-                               ,meta-supported-color-schemes
-                               (title ,(gettext "Password Reset"))
-                               (style ,mail-style))
-                         (body (h1 (span ,(gettext "Reset your password: "))
-                                   (span ,system-name))
-                               (p ,(gettext
-                                    "We have received a request to reset the password for your user account:"))
-                               (table (@ (style ,(mk-style '((margin-top . "1.6em")
-                                                             (margin-bottom . "1.6em")))))
-                                      (tr (td ,(gettext "User:"))
-                                          (td ,user)))
+(define* (password-reset-html-template #:key system-name user reset-link)
+  (let* ((tree (mail-document
+                #:title (gettext "Password Reset")
+                #:content `((h1 (@ (class . "pw-heading")
+                                   (style ,(mail-heading-style)))
+                                ,(format #f "~a ~a"
+                                         (gettext "Reset your password")
+                                         (or system-name "")))
+                            (p (@ (class . "pw-text")
+                                  (style ,(mail-text-style)))
+                               ,(gettext
+                                 "We received a request to reset the password for your account. If that was you, follow the button below; the link is yours alone, and it is safe to ignore this message if it was not."))
+                            ,(mail-inner
+                              (list (mail-facts
+                                     (list (cons (gettext "Account")
+                                                 (mail-mono (or user "")))))))
+                            ,(mail-button #:href (or reset-link "#")
+                                          #:label (gettext "Reset your password"))
+                            (p (@ (class . "pw-muted")
+                                  (style ,(mail-muted-style)))
+                               ,(gettext
+                                 "If the button does not work, copy and paste this link into your browser:"))
+                            (p (@ (class . "pw-mono")
+                                  (style ,(mail-mono-style)))
+                               ,(or reset-link ""))
+                            ,(mail-rule)
+                            (p (@ (class . "pw-muted")
+                                  (style ,(mail-muted-style)))
+                               ,(gettext
+                                 "This message was sent because someone asked to reset the password on this account. If that was not you, no action is needed and your password has not changed.")))))
+         (_ tree))
+    (with-output-to-string (lambda ()
+                             (sxml->xml tree)))))
 
-                               (hr (@ (style ,(mk-style '((margin-top . "1.4em")
-                                                          (margin-bottom . "1.4em"))))))
-                               (a (@ (class . "button-link")
-                                     (href unquote reset-link))
-                                  ,(gettext "🔗 Reset your password on ")
-                                  ,system-name)
-                               (p (small ,reset-link))
-                               (p ,(gettext
-                                    "Feel free to ignore this e-mail if you did not request it."))
-                               ,mail-footer)))))
-      (with-output-to-string (lambda ()
-                               (sxml->xml tree)))))
-  (export password-reset-html-template))
-
-(begin
-  (define* (password-reset-plain-template #:key system-name user reset-link)
-    (let* ((content (list (gettext "Reset your password: ")
-                          (gettext
-                           "We have received a request to reset the password for your user account:")
-                          (gettext "User:")
-                          user
-                          (gettext "Go reset your password on ")
-                          system-name
-                          reset-link
-                          "----------------------------------"
-                          (gettext
-                           "Feel free to ignore this e-mail if you did not request it.")
-                          (gettext
-                           "If you had trouble clicking that link, please manually copy paste it:")
-                          reset-link
-                          "----------------------------------"
-                          (gettext
-                           "this e-mail was powered by pingwing - the free and open Lisp-powered notification nexus")
-                          "https://codeberg.org/jjba23/pingwing"
-                          (gettext "see pingwing's source code on Codeberg"))))
-      (string-join content "\n")))
-  (export password-reset-plain-template))
+(define* (password-reset-plain-template #:key system-name user reset-link)
+  (let* ((content (list (format #f "~a ~a"
+                                (gettext "Reset your password:") (or system-name
+                                                                     ""))
+                        ""
+                        (gettext
+                         "We received a request to reset the password for your account:")
+                        (format #f "~a ~a" (gettext "Account:") (or user ""))
+                        ""
+                        (gettext "Follow this link to choose a new password:")
+                        (or reset-link "")
+                        ""
+                        "----------------------------------"
+                        (gettext
+                         "If you did not ask for this, you can ignore this message.")
+                        (gettext
+                         "If you had trouble clicking the link, copy and paste it:")
+                        (or reset-link "")
+                        "----------------------------------"
+                        (gettext
+                         "this e-mail was powered by pingwing - the free and open Lisp-powered notification nexus")
+                        "https://codeberg.org/jjba23/pingwing"
+                        (gettext "see pingwing's source code on Codeberg"))))
+    (string-join content "\n")))

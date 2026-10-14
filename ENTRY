@@ -43,12 +43,34 @@
 
 (load "env.scm")
 
+;; Everything the queue and the sender are tuned by, in one place.
+;;
+;; `mail' is how a message goes out: the SMTP account to authenticate as, how
+;; many times one delivery is tried before it is called a failure, and how long
+;; the first wait between tries is (each later wait doubles it).  `use-ssl 1'
+;; asks libcurl to upgrade the connection with STARTTLS when the server offers
+;; it, which is what a submission port (587) expects.
+;;
+;; `pingwing' is how the worker behaves: how long it rests between sweeps, how
+;; many pending tasks a sweep takes and how many of them run at once, how many
+;; sweeps a task may fail before it is given up on, and how long a task may sit
+;; in `processing' before a later sweep assumes the worker that claimed it died
+;; and puts it back in the queue.
 (define pingwing-settings
   `((mail (access-key unquote pingwing-mail-access-key)
           (access-secret unquote pingwing-mail-access-secret)
           (access-server unquote pingwing-mail-access-server)
-          (access-port unquote pingwing-mail-access-port))
-    (pingwing (worker-sleep-seconds . 5))))
+          (access-port unquote pingwing-mail-access-port)
+          (attempts . 3)
+          (retry-delay-seconds . 3)
+          (use-ssl . 1)
+          (tmp-dir . "tmp")
+          (verbose . #f))
+    (pingwing (worker-sleep-seconds . 5)
+              (worker-batch-limit . 16)
+              (worker-concurrency . 4)
+              (max-task-attempts . 5)
+              (stale-processing-seconds . 600))))
 
 ;; Store the thread object belonging to the pingwing queue worker
 (define worker-thread

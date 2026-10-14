@@ -32,6 +32,18 @@
 (define hot-reload-file-types
   '(scm css js))
 
+;; The Emacs Lisp script to run for publishing the manual, which is the
+;; project's README: one document, so a reader has one place to look and the
+;; two cannot come to say different things.
+(define emacs-lisp-manual-publish-cmd
+  '(progn (find-file "./README.org")
+          (org-html-export-to-html)
+          (message "finished publishing the PingWing manual")))
+
+;; The SQL migrations, oldest first, as the file names sort.
+(define migrations-glob
+  "resources/migrations/sqlite/*.sql")
+
 ;; ====== Maak tasks ======
 
 (define (repl)
@@ -44,9 +56,19 @@
   ($ '("maak --list")))
 
 (define (build-manual)
-  "Render the project's manual."
+  "Render the project's manual -- the README -- as a single HTML page."
   (time-machine-manifest-shell (list (~ "emacs -Q --batch --eval '~s'"
                                         emacs-lisp-manual-publish-cmd))
+                               #:verbose? #t))
+
+(define (migrate)
+  "Apply the SQL migrations under resources/migrations/sqlite, once each.
+
+The runner keeps its own record of what it has applied, so this is how a
+running deployment is brought up to the schema the source in front of it
+expects -- and it is safe to run again."
+  (time-machine-manifest-shell (list (~ "bash scripts/migrate.sh ~a"
+                                        pingwing-db))
                                #:verbose? #t))
 
 (define (fmt)
@@ -90,18 +112,24 @@
   (time-machine-manifest-shell '("art work -c conf/production.conf")))
 
 (define (init-db)
-  "Initialize a new database and enable WAL mode
-for higher concurrent writes to SQLite 3."
+  "Initialize a new database: the file, WAL mode, and the schema.
+
+The database that comes out is empty and ready -- every migration under
+resources/migrations/sqlite is applied to it in file order -- so this is the
+first command of a new deployment.  It deletes whatever file is already there,
+which is why a deployment that has data runs `maak migrate' instead."
   (delete-file-recursively pingwing-db)
   (delete-file-recursively (~ "~a-shm" pingwing-db))
   (delete-file-recursively (~ "~a-wal" pingwing-db))
   (time-machine-manifest-shell (~ "sqlite3 ~a 'PRAGMA journal_mode=WAL;'"
-                                  pingwing-db)))
+                                  pingwing-db))
+  (migrate))
 
 (define (import-production-env)
   "Import production env's database to local workspace via SSH/SCP"
   ($ '("scp wolk-jjba:/etc/byggsteg/job-clone/pingwing/trunk/env.scm .")))
 
-(define (local-login)
-  ($ '("http --form POST" "http://localhost:50077/api/v1/login"
-       "email=jjbigorra@gmail.com" "password=***")))
+(define (test)
+  "Run the project's test suite."
+  (time-machine-manifest-shell (list "guile -L ./lib -L . test/run-tests.scm")
+                               #:verbose? #t))
