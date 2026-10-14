@@ -51,15 +51,12 @@
 ;; is handed one string and would otherwise read the spaces as argument
 ;; boundaries.
 (define (shell-quoted text)
-  (string-append
-   "'"
-   (apply string-append
-          (map (lambda (c)
-                 (if (eqv? c #\')
-                     "'\\''"
-                     (string c)))
-               (string->list text)))
-   "'"))
+  (string-append "'"
+                 (apply string-append
+                        (map (lambda (c)
+                               (if (eqv? c #\') "'\\''"
+                                   (string c)))
+                             (string->list text))) "'"))
 
 ;; ====== Maak tasks ======
 
@@ -85,10 +82,10 @@ Mutastructura does the work: it keeps its own ledger of which migration has
 run, applies the rest oldest first, and runs each one in a transaction, so a
 migration that fails leaves the database as it was.  Running this again is
 safe -- the migrations already recorded are skipped."
-  (time-machine-manifest-shell
-   (list (~ "mutastructura --database sqlite3 --connection ~a --migrations ~a"
-            pingwing-db migrations-dir))
-   #:verbose? #t))
+  (time-machine-manifest-shell (list (~
+                                      "mutastructura --database sqlite3 --connection ~a --migrations ~a"
+                                      pingwing-db migrations-dir))
+                               #:verbose? #t))
 
 (define (fmt)
   "Format Scheme source code files according to the Guix style guide."
@@ -156,7 +153,7 @@ why the specs under test/veritas/unit are named `(veritas unit ...)': that is
 the name the runner derives from where they sit, and `-L ./test' is what lets
 Guile resolve it."
   (time-machine-manifest-shell (list "guile -L ./lib -L . -L ./test"
-                                     "-c '(begin (use-modules (veritas runner)) (run-tests))'")
+                                "-c '(begin (use-modules (veritas runner)) (run-tests))'")
                                #:verbose? #t))
 
 (define (test-benchmark)
@@ -170,8 +167,7 @@ The run is handed to `sh -c' rather than passed as arguments: the type of run
 is set through the environment, and a Guix shell runs the program it is given
 without a shell in between, so `VERITAS_TEST_TYPE=benchmark' would be read as
 the name of a program."
-  (time-machine-manifest-shell
-   (list "sh -c"
-         (shell-quoted
-          "VERITAS_TEST_TYPE=benchmark guile -L ./lib -L . -L ./test -c '(begin (use-modules (veritas runner)) (run-tests))'"))
-   #:verbose? #t))
+  (time-machine-manifest-shell (list "sh -c"
+                                     (shell-quoted
+                                      "VERITAS_TEST_TYPE=benchmark guile -L ./lib -L . -L ./test -c '(begin (use-modules (veritas runner)) (run-tests))'"))
+                               #:verbose? #t))

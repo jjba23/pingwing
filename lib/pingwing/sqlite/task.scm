@@ -66,9 +66,10 @@
   ;; mis-set setting must not be able to ask the database for a negative
   ;; number of rows, and one that is absurdly large is a sweep nobody wants.
   (define (row-limit limit default)
-    (if (and limit (number? limit) (> limit 0))
-        (inexact->exact limit)
-        default))
+    (if (and limit
+             (number? limit)
+             (> limit 0))
+        (inexact->exact limit) default))
 
   (define (get-next-pending-task)
     ;; One row, oldest first: the order is what keeps the queue fair, since the
@@ -94,14 +95,19 @@
   ;; The metadata columns only: the list an operator reads must not carry a
   ;; password-reset link or a recipient list onto the wire.
   (define (get-recent-tasks limit)
-    (execute-read
-     "get-recent-tasks"
-     (sql-select "tasks"
-                 #:columns '(id task-status task-type template sender-address
-                                subject attempts last-error created-at
-                                updated-at)
-                 #:order-by '((created-at desc))
-                 #:limit (row-limit limit 50))))
+    (execute-read "get-recent-tasks"
+                  (sql-select "tasks"
+                              #:columns '(id task-status
+                                             task-type
+                                             template
+                                             sender-address
+                                             subject
+                                             attempts
+                                             last-error
+                                             created-at
+                                             updated-at)
+                              #:order-by '((created-at desc))
+                              #:limit (row-limit limit 50))))
 
   (define (claim-task-by-id id)
     ;; Only a task that is still pending is claimed, so a task another sweep
@@ -109,8 +115,9 @@
     ;; is what makes the claim atomic rather than a read followed by a write.
     (execute-write "claim-task-by-id"
                    (sql-update "tasks"
-                               `((task-status . "processing")
-                                 (updated-at unquote (current-time)))
+                               `((task-status . "processing") (updated-at
+                                                               unquote
+                                                               (current-time)))
                                #:where (list (cons 'id id)
                                              (cons 'task-status "pending")))))
 
@@ -120,15 +127,14 @@
     ;; or last touched before the threshold", and an OR is outside what the
     ;; condition lists above express -- which is what `sql-parameterize' is for.
     (let ((threshold (- (current-time)
-                         (max 1 (inexact->exact (if (and stale-seconds
-                                                         (number? stale-seconds))
-                                                    stale-seconds
-                                                    600))))))
-      (execute-write
-       "requeue-stale-processing-tasks"
-       (sql-parameterize
-        "UPDATE \"tasks\" SET \"task_status\" = ? WHERE \"task_status\" = ? AND (\"updated_at\" IS NULL OR \"updated_at\" < ?)"
-        (list "pending" "processing" threshold)))))
+                        (max 1
+                             (inexact->exact (if (and stale-seconds
+                                                      (number? stale-seconds))
+                                                 stale-seconds 600))))))
+      (execute-write "requeue-stale-processing-tasks"
+                     (sql-parameterize
+                      "UPDATE \"tasks\" SET \"task_status\" = ? WHERE \"task_status\" = ? AND (\"updated_at\" IS NULL OR \"updated_at\" < ?)"
+                      (list "pending" "processing" threshold)))))
 
   (define (delete-task-by-id id)
     (execute-write "delete-task-by-id"

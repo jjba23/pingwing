@@ -43,20 +43,27 @@
 ;; here so a template handed a number and one handed a string agree.
 (define (ticket-number human-id)
   (cond
-    ((or (not human-id) (equal? human-id "")) #f)
-    ((number? human-id) (format #f "#~a" human-id))
-    ((string-prefix? "#" human-id) human-id)
+    ((or (not human-id)
+         (equal? human-id ""))
+     #f)
+    ((number? human-id)
+     (format #f "#~a" human-id))
+    ((string-prefix? "#" human-id)
+     human-id)
     (else (format #f "#~a" human-id))))
 
 ;; "set" here means a value worth putting in a fact row: not #f and not the
 ;; empty string, which is what an optional field arrives as.
 (define (set-value v)
-  (cond ((not v) #f)
-        ((and (string? v) (string-null? v)) #f)
-        (else (format #f "~a" v))))
+  (cond
+    ((not v)
+     #f)
+    ((and (string? v)
+          (string-null? v))
+     #f)
+    (else (format #f "~a" v))))
 
-(define* (lucidplan-new-ticket-html-template #:key
-                                             system-name
+(define* (lucidplan-new-ticket-html-template #:key system-name
                                              project-name
                                              project-human-id
                                              ticket-human-id
@@ -72,69 +79,101 @@
                       (set-value project-human-id)
                       (gettext "your project")))
          (number (ticket-number ticket-human-id))
-         (opener (or (set-value author) (gettext "someone")))
+         (opener (or (set-value author)
+                     (gettext "someone")))
          (described? (set-value description))
-         (tree (mail-document
-                #:title (format #f "~a ~a" (gettext "New ticket in") project)
-                #:content `((h1 (@ (class . "pw-heading")
-                                   (style ,(mail-heading-style)))
-                                ,(format #f "~a ~a"
-                                         (gettext "New ticket in") project))
-                            (p (@ (class . "pw-text")
-                                  (style ,(mail-text-style)))
-                               ,(format #f
-                                        (gettext "~a opened a new ticket~a. Here is what it says.")
-                                        opener
-                                        (if number (format #f " ~a" number)
-                                            "")))
-                            ,(mail-inner
-                              (list (mail-facts
-                                     (list (cons (gettext "Ticket")
-                                                 (and number (mail-mono number)))
-                                           (cons (gettext "Title")
-                                                 (set-value ticket-title))
-                                           (cons (gettext "Project")
-                                                 (mail-mono project))
-                                           (cons (gettext "Type")
-                                                 (set-value ticket-type))
-                                           (cons (gettext "Priority")
-                                                 (set-value priority))
-                                           (cons (gettext "Status")
-                                                 (set-value ticket-status))
-                                           (cons (gettext "Assignee")
-                                                 (set-value assignee))))))
-                            ,@(if described?
-                                  `((p (@ (class . "pw-muted")
-                                          (style ,(mail-muted-style)))
-                                       ,(gettext "Description"))
-                                    ,(mail-inner
-                                      (list `(div (@ (style "white-space:pre-wrap;word-break:break-word;"))
-                                                  ,description))))
-                                  '())
-                            ,(mail-button #:href (or (set-value ticket-url) "#")
-                                          #:label (format #f "~a ~a"
-                                                          (gettext "Open ticket on")
-                                                          (or (set-value
-                                                               system-name)
-                                                              (gettext "your board"))))
-                            (p (@ (class . "pw-muted")
-                                  (style ,(mail-muted-style)))
-                               ,(gettext
-                                 "If the button does not work, copy and paste this link into your browser:"))
-                            (p (@ (class . "pw-mono")
-                                  (style ,(mail-mono-style)))
-                               ,(or (set-value ticket-url) ""))
-                            ,(mail-rule)
-                            (p (@ (class . "pw-muted")
-                                  (style ,(mail-muted-style)))
-                               ,(gettext
-                                 "You receive this because you take part in this project; no action is needed to keep receiving them.")))))
+         (tree (mail-document #:title (format #f "~a ~a"
+                                              (gettext "New ticket in")
+                                              project)
+                              #:content `((h1 (@ (class . "pw-heading")
+                                                 (style ,(mail-heading-style)))
+                                              ,(format #f "~a ~a"
+                                                       (gettext
+                                                        "New ticket in")
+                                                       project))
+                                          (p (@ (class . "pw-text")
+                                                (style ,(mail-text-style)))
+                                             ,(format #f
+                                                      (gettext
+                                                       "~a opened a new ticket~a. Here is what it says.")
+                                                      opener
+                                                      (if number
+                                                          (format #f " ~a"
+                                                                  number) "")))
+                                          ,(mail-inner (list (mail-facts (list
+                                                                          (cons
+                                                                           (gettext
+                                                                            "Ticket")
+                                                                           (and
+                                                                            number
+                                                                            (mail-mono
+                                                                             number)))
+                                                                          (cons
+                                                                           (gettext
+                                                                            "Title")
+                                                                           (set-value
+                                                                            ticket-title))
+                                                                          (cons
+                                                                           (gettext
+                                                                            "Project")
+                                                                           (mail-mono
+                                                                            project))
+                                                                          (cons
+                                                                           (gettext
+                                                                            "Type")
+                                                                           (set-value
+                                                                            ticket-type))
+                                                                          (cons
+                                                                           (gettext
+                                                                            "Priority")
+                                                                           (set-value
+                                                                            priority))
+                                                                          (cons
+                                                                           (gettext
+                                                                            "Status")
+                                                                           (set-value
+                                                                            ticket-status))
+                                                                          (cons
+                                                                           (gettext
+                                                                            "Assignee")
+                                                                           (set-value
+                                                                            assignee))))))
+                                          ,@(if described?
+                                                `((p (@ (class . "pw-muted")
+                                                        (style ,(mail-muted-style)))
+                                                     ,(gettext "Description"))
+                                                  ,(mail-inner (list `(div (@ (style
+                                                                               "white-space:pre-wrap;word-break:break-word;"))
+                                                                           ,description))))
+                                                '())
+                                          ,(mail-button #:href (or (set-value
+                                                                    ticket-url)
+                                                                   "#")
+                                                        #:label (format #f
+                                                                 "~a ~a"
+                                                                 (gettext
+                                                                  "Open ticket on")
+                                                                 (or (set-value
+                                                                      system-name)
+                                                                     (gettext
+                                                                      "your board"))))
+                                          (p (@ (class . "pw-muted")
+                                                (style ,(mail-muted-style)))
+                                             ,(gettext
+                                               "If the button does not work, copy and paste this link into your browser:"))
+                                          (p (@ (class . "pw-mono")
+                                                (style ,(mail-mono-style)))
+                                             ,(or (set-value ticket-url) ""))
+                                          ,(mail-rule)
+                                          (p (@ (class . "pw-muted")
+                                                (style ,(mail-muted-style)))
+                                             ,(gettext
+                                               "You receive this because you take part in this project; no action is needed to keep receiving them.")))))
          (_ tree))
     (with-output-to-string (lambda ()
                              (sxml->xml tree)))))
 
-(define* (lucidplan-new-ticket-plain-template #:key
-                                              system-name
+(define* (lucidplan-new-ticket-plain-template #:key system-name
                                               project-name
                                               project-human-id
                                               ticket-human-id
@@ -150,41 +189,44 @@
                       (set-value project-human-id)
                       (gettext "your project")))
          (number (ticket-number ticket-human-id))
-         (opener (or (set-value author) (gettext "someone")))
+         (opener (or (set-value author)
+                     (gettext "someone")))
          (content (append (list (format #f "~a ~a"
-                                        (gettext "New ticket in") project)
-                                ""
+                                        (gettext "New ticket in") project) ""
                                 (format #f
                                         (gettext "~a opened a new ticket~a.")
                                         opener
-                                        (if number (format #f " ~a" number) ""))
-                                "")
+                                        (if number
+                                            (format #f " ~a" number) "")) "")
                           (if number
-                              (list (format #f "~a ~a" (gettext "Ticket:") number))
+                              (list (format #f "~a ~a"
+                                            (gettext "Ticket:") number))
                               '())
                           (if (set-value ticket-title)
-                              (list (format #f "~a ~a" (gettext "Title:")
-                                            ticket-title))
+                              (list (format #f "~a ~a"
+                                            (gettext "Title:") ticket-title))
                               '())
-                          (list (format #f "~a ~a" (gettext "Project:") project))
+                          (list (format #f "~a ~a"
+                                        (gettext "Project:") project))
                           (if (set-value ticket-type)
-                              (list (format #f "~a ~a" (gettext "Type:")
-                                            ticket-type))
+                              (list (format #f "~a ~a"
+                                            (gettext "Type:") ticket-type))
                               '())
                           (if (set-value priority)
-                              (list (format #f "~a ~a" (gettext "Priority:")
-                                            priority))
+                              (list (format #f "~a ~a"
+                                            (gettext "Priority:") priority))
                               '())
                           (if (set-value ticket-status)
-                              (list (format #f "~a ~a" (gettext "Status:")
-                                            ticket-status))
+                              (list (format #f "~a ~a"
+                                            (gettext "Status:") ticket-status))
                               '())
                           (if (set-value assignee)
-                              (list (format #f "~a ~a" (gettext "Assignee:")
-                                            assignee))
+                              (list (format #f "~a ~a"
+                                            (gettext "Assignee:") assignee))
                               '())
                           (if (set-value description)
-                              (list "" (gettext "Description:") description)
+                              (list ""
+                                    (gettext "Description:") description)
                               '())
                           (list ""
                                 (format #f "~a: ~a"
@@ -193,9 +235,11 @@
                                 "----------------------------------"
                                 (format #f "~a ~a"
                                         (gettext "this message was sent by")
-                                        (or (set-value system-name) "lucidplan"))
+                                        (or (set-value system-name)
+                                            "lucidplan"))
                                 (gettext
                                  "this e-mail was powered by pingwing - the free and open Lisp-powered notification nexus")
                                 "https://codeberg.org/jjba23/pingwing"
-                                (gettext "see pingwing's source code on Codeberg")))))
+                                (gettext
+                                 "see pingwing's source code on Codeberg")))))
     (string-join content "\n")))

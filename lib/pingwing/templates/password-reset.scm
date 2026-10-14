@@ -31,47 +31,55 @@
   #:export (password-reset-html-template password-reset-plain-template))
 
 (define* (password-reset-html-template #:key system-name user reset-link)
-  (let* ((tree (mail-document
-                #:title (gettext "Password Reset")
-                #:content `((h1 (@ (class . "pw-heading")
-                                   (style ,(mail-heading-style)))
-                                ,(format #f "~a ~a"
-                                         (gettext "Reset your password")
-                                         (or system-name "")))
-                            (p (@ (class . "pw-text")
-                                  (style ,(mail-text-style)))
-                               ,(gettext
-                                 "We received a request to reset the password for your account. If that was you, follow the button below; the link is yours alone, and it is safe to ignore this message if it was not."))
-                            ,(mail-inner
-                              (list (mail-facts
-                                     (list (cons (gettext "Account")
-                                                 (mail-mono (or user "")))))))
-                            ,(mail-button #:href (or reset-link "#")
-                                          #:label (gettext "Reset your password"))
-                            (p (@ (class . "pw-muted")
-                                  (style ,(mail-muted-style)))
-                               ,(gettext
-                                 "If the button does not work, copy and paste this link into your browser:"))
-                            (p (@ (class . "pw-mono")
-                                  (style ,(mail-mono-style)))
-                               ,(or reset-link ""))
-                            ,(mail-rule)
-                            (p (@ (class . "pw-muted")
-                                  (style ,(mail-muted-style)))
-                               ,(gettext
-                                 "This message was sent because someone asked to reset the password on this account. If that was not you, no action is needed and your password has not changed.")))))
+  (let* ((tree (mail-document #:title (gettext "Password Reset")
+                              #:content `((h1 (@ (class . "pw-heading")
+                                                 (style ,(mail-heading-style)))
+                                              ,(format #f "~a ~a"
+                                                       (gettext
+                                                        "Reset your password")
+                                                       (or system-name "")))
+                                          (p (@ (class . "pw-text")
+                                                (style ,(mail-text-style)))
+                                             ,(gettext
+                                               "We received a request to reset the password for your account. If that was you, follow the button below; the link is yours alone, and it is safe to ignore this message if it was not."))
+                                          ,(mail-inner (list (mail-facts (list
+                                                                          (cons
+                                                                           (gettext
+                                                                            "Account")
+                                                                           (mail-mono
+                                                                            (or
+                                                                             user
+                                                                             "")))))))
+                                          ,(mail-button #:href (or reset-link
+                                                                   "#")
+                                                        #:label (gettext
+                                                                 "Reset your password"))
+                                          (p (@ (class . "pw-muted")
+                                                (style ,(mail-muted-style)))
+                                             ,(gettext
+                                               "If the button does not work, copy and paste this link into your browser:"))
+                                          (p (@ (class . "pw-mono")
+                                                (style ,(mail-mono-style)))
+                                             ,(or reset-link ""))
+                                          ,(mail-rule)
+                                          (p (@ (class . "pw-muted")
+                                                (style ,(mail-muted-style)))
+                                             ,(gettext
+                                               "This message was sent because someone asked to reset the password on this account. If that was not you, no action is needed and your password has not changed.")))))
          (_ tree))
     (with-output-to-string (lambda ()
                              (sxml->xml tree)))))
 
 (define* (password-reset-plain-template #:key system-name user reset-link)
   (let* ((content (list (format #f "~a ~a"
-                                (gettext "Reset your password:") (or system-name
-                                                                     ""))
+                                (gettext "Reset your password:")
+                                (or system-name ""))
                         ""
                         (gettext
                          "We received a request to reset the password for your account:")
-                        (format #f "~a ~a" (gettext "Account:") (or user ""))
+                        (format #f "~a ~a"
+                                (gettext "Account:")
+                                (or user ""))
                         ""
                         (gettext "Follow this link to choose a new password:")
                         (or reset-link "")

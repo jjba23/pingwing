@@ -183,8 +183,7 @@ and compile-time macros.")
      (list
       #:source-directory "src"))
     (native-inputs (list guile-3.0))
-    (propagated-inputs (list guile-fibers
-                             guile-json-4)) ;; for versions >= 2.0.0
+    (propagated-inputs (list guile-fibers guile-json-4)) ;for versions >= 2.0.0
     (home-page "https://codeberg.org/jjba23/veritas")
     (synopsis "Testing framework for Guile")
     (description

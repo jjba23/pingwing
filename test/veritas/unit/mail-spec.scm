@@ -42,11 +42,13 @@
                                 #:expect (quoted-printable-encode "a=b")
                                 #:got "a=3Db"))
          (test "a leading dot is escaped so SMTP cannot end DATA early"
-               (assert-contains #:name "a line that starts with a dot is encoded"
+               (assert-contains #:name
+                                "a line that starts with a dot is encoded"
                                 #:expect (quoted-printable-encode ".dot\nnext")
                                 #:got "=2Edot"))
          (test "non-ASCII is escaped byte by byte"
-               (assert-contains #:name "an accented character travels as its bytes"
+               (assert-contains #:name
+                                "an accented character travels as its bytes"
                                 #:expect (quoted-printable-encode "é")
                                 #:got "=C3=A9"))
          (test "lines are split with CRLF"
@@ -54,7 +56,8 @@
                                 #:expect (quoted-printable-encode "one\ntwo")
                                 #:got "one\r\ntwo"))
          (test "a trailing space is escaped"
-               (assert-contains #:name "a space before a newline cannot be eaten"
+               (assert-contains #:name
+                                "a space before a newline cannot be eaten"
                                 #:expect (quoted-printable-encode "tail \n")
                                 #:got "tail=20"))))
 
@@ -63,7 +66,8 @@
 (define headers-suite
   (suite "headers"
          (test "ASCII is left readable"
-               (assert-equal #:name "nothing is encoded that needs no encoding"
+               (assert-equal #:name
+                             "nothing is encoded that needs no encoding"
                              #:expect "hello"
                              #:got (rfc2047-encode "hello")))
          (test "non-ASCII is encoded"
@@ -71,8 +75,8 @@
                                 #:expect (rfc2047-encode "é")
                                 #:got "=?UTF-8?B?"))
          (test "a line break cannot inject a header"
-               (assert-not-contains
-                #:name "a CRLF in a value cannot open a header of its own"
+               (assert-not-contains #:name
+                "a CRLF in a value cannot open a header of its own"
                 #:expect (sanitize-header "a\r\nBcc: x")
                 #:got "\n"))
          (test "a display name with a comma is quoted"
@@ -80,13 +84,15 @@
                                 #:expect (format-address "Doe, Jane" "j@x.y")
                                 #:got "\"Doe, Jane\" <j@x.y>"))
          (test "a bare address carries no angle brackets"
-               (assert-equal #:name "an address with no name is just the address"
+               (assert-equal #:name
+                             "an address with no name is just the address"
                              #:expect "j@x.y"
                              #:got (format-address "" "j@x.y")))
          (test "the date is an RFC 5322 date"
-               (assert-matches
-                #:name "the date header is the shape a mail server reads"
-                #:pattern "^[A-Z][a-z][a-z], [0-9][0-9] [A-Z][a-z][a-z] [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} [+-][0-9]{4}$"
+               (assert-matches #:name
+                "the date header is the shape a mail server reads"
+                #:pattern
+                "^[A-Z][a-z][a-z], [0-9][0-9] [A-Z][a-z][a-z] [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} [+-][0-9]{4}$"
                 #:got (rfc5322-date)))))
 
 ;;; ====== the message ======
@@ -100,35 +106,39 @@
                                #:subject "Hi"
                                #:body "plain body"
                                #:body-html "<p>html body</p>")))
-    (suite
-     "the message"
-     (test "the id is appended to the subject"
-           (assert-contains #:name "a reader can match the mail to the task"
-                            #:expect m
-                            #:got "Subject: Hi the-id"))
-     (test "a Message-ID is generated"
-           (assert-contains #:name "the message carries an id of its own"
-                            #:expect m
-                            #:got "Message-ID: <"))
-     (test "a Date header is present"
-           (assert-contains #:name "the message is dated"
-                            #:expect m
-                            #:got "Date: "))
-     (test "both parts are present"
-           (assert-true (and (string-contains m "plain body")
-                             (string-contains m "html body")
-                             #t)
-                        #:name "the plain and the HTML body are both there"))
-     (test "the boundary opens and closes"
-           (assert-true (and (string-contains m
-                                              "multipart/alternative; boundary=\"")
-                             (string-contains m "--pingwing-")
-                             #t)
-                        #:name "a multipart message declares its boundary"))
-     (test "every line ends CRLF (no bare LF)"
-           (assert-false (string-any (lambda (c) (char=? c #\newline))
-                                     (string-replace-substring m "\r\n" ""))
-                         #:name "no bare newline survives into the message")))))
+    (suite "the message"
+           (test "the id is appended to the subject"
+                 (assert-contains #:name
+                                  "a reader can match the mail to the task"
+                                  #:expect m
+                                  #:got "Subject: Hi the-id"))
+           (test "a Message-ID is generated"
+                 (assert-contains #:name
+                                  "the message carries an id of its own"
+                                  #:expect m
+                                  #:got "Message-ID: <"))
+           (test "a Date header is present"
+                 (assert-contains #:name "the message is dated"
+                                  #:expect m
+                                  #:got "Date: "))
+           (test "both parts are present"
+                 (assert-true (and (string-contains m "plain body")
+                                   (string-contains m "html body") #t)
+                              #:name
+                              "the plain and the HTML body are both there"))
+           (test "the boundary opens and closes"
+                 (assert-true (and (string-contains m
+                                    "multipart/alternative; boundary=\"")
+                                   (string-contains m "--pingwing-") #t)
+                              #:name
+                              "a multipart message declares its boundary"))
+           (test "every line ends CRLF (no bare LF)"
+                 (assert-false (string-any (lambda (c)
+                                             (char=? c #\newline))
+                                           (string-replace-substring m "\r\n"
+                                                                     ""))
+                               #:name
+                               "no bare newline survives into the message")))))
 
 (define (spec)
   (veritas-run quoted-printable-suite headers-suite message-suite))

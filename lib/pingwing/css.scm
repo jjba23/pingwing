@@ -33,9 +33,14 @@
   #:use-module (ice-9 string-fun)
   #:use-module (ice-9 iconv)
   #:use-module (srfi srfi-1)
-  #:export (mk-kv-conf-lines mk-css-conf-lines mk-style
-                            mail-sans-stack mail-mono-stack mail-head-style
-                            mail-light mail-dark color-of))
+  #:export (mk-kv-conf-lines mk-css-conf-lines
+                             mk-style
+                             mail-sans-stack
+                             mail-mono-stack
+                             mail-head-style
+                             mail-light
+                             mail-dark
+                             color-of))
 
 ;; Create a CSS configuration from PAIRS, a selector to values alist.
 (define* (mk-kv-conf-lines pairs
@@ -66,9 +71,7 @@
                                    (value (cdr x)))
                                (and value
                                     (not (equal? value ""))
-                                    (format #f "~a: ~a;" key value))))
-                           xs)
-               " "))
+                                    (format #f "~a: ~a;" key value)))) xs) " "))
 
 ;; The type faces the happy path asks for.  The first name in each stack is
 ;; the webfont the head style declares; the rest are what a mail client that
@@ -126,14 +129,22 @@
 ;; loads neither simply reaches past them to its own fonts.
 (define mail-font-faces
   (string-append
-   "@import url('https://fonts.googleapis.com/css2?family=Intel+One+Mono:ital,wght@0,300..700;1,300..700&display=swap');\n"
-   "@font-face{font-family:'Lucida Sans';font-style:normal;font-weight:400;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LSANS.woff') format('woff');}\n"
-   "@font-face{font-family:'Lucida Sans';font-style:italic;font-weight:400;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LSANSI.woff') format('woff');}\n"
-   "@font-face{font-family:'Lucida Sans';font-style:normal;font-weight:600;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LSANSD.woff') format('woff');}\n"
-   "@font-face{font-family:'Lucida Sans';font-style:italic;font-weight:600;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LSANSDI.woff') format('woff');}\n"
-   "@font-face{font-family:'Lucida Sans Typewriter';font-style:normal;font-weight:400;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LTYPE.woff') format('woff');}\n"
-   "@font-face{font-family:'Lucida Sans Typewriter';font-style:oblique;font-weight:400;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LTYPEO.woff') format('woff');}\n"
-   "@font-face{font-family:'Lucida Sans Typewriter';font-style:normal;font-weight:700;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LTYPEB.woff') format('woff');}\n"))
+   "@import url('https://fonts.googleapis.com/css2?family=Intel+One+Mono:ital,wght@0,300..700;1,300..700&display=swap');
+"
+   "@font-face{font-family:'Lucida Sans';font-style:normal;font-weight:400;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LSANS.woff') format('woff');}
+"
+   "@font-face{font-family:'Lucida Sans';font-style:italic;font-weight:400;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LSANSI.woff') format('woff');}
+"
+   "@font-face{font-family:'Lucida Sans';font-style:normal;font-weight:600;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LSANSD.woff') format('woff');}
+"
+   "@font-face{font-family:'Lucida Sans';font-style:italic;font-weight:600;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LSANSDI.woff') format('woff');}
+"
+   "@font-face{font-family:'Lucida Sans Typewriter';font-style:normal;font-weight:400;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LTYPE.woff') format('woff');}
+"
+   "@font-face{font-family:'Lucida Sans Typewriter';font-style:oblique;font-weight:400;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LTYPEO.woff') format('woff');}
+"
+   "@font-face{font-family:'Lucida Sans Typewriter';font-style:normal;font-weight:700;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LTYPEB.woff') format('woff');}
+"))
 
 ;; The frosted glass itself, as much of it as a mail can hold.  `backdrop-filter'
 ;; is not something a mail client will do, so the glass is faked the way it has
@@ -143,8 +154,8 @@
 ;; re-points the classes at the dark palette when the reader's client says so,
 ;; which is the one thing that genuinely cannot be written inline.
 (define (dark-overrides)
-  (format #f "\
-@media (prefers-color-scheme: dark) {
+  (format #f
+   "@media (prefers-color-scheme: dark) {
   .pw-body { background-color: ~a !important; background-image: ~a !important; color: ~a !important; }
   .pw-panel { background-color: ~a !important; border-color: ~a !important; box-shadow: ~a !important; }
   .pw-heading { color: ~a !important; }
@@ -156,23 +167,39 @@
   .pw-mono { color: ~a !important; }
 }
 "
-          (color-of mail-dark 'bg)
-          (color-of mail-dark 'bg-gradient)
-          (color-of mail-dark 'ink)
-          (color-of mail-dark 'panel)
-          (color-of mail-dark 'panel-border)
-          (color-of mail-dark 'panel-shadow)
-          (color-of mail-dark 'heading)
-          (color-of mail-dark 'ink)
-          (color-of mail-dark 'muted)
-          (color-of mail-dark 'inner)
-          (color-of mail-dark 'inner-border)
-          (color-of mail-dark 'rule)
-          (color-of mail-dark 'accent)
-          (color-of mail-dark 'accent-ink)
-          (color-of mail-dark 'accent)))
+   (color-of mail-dark
+             'bg)
+   (color-of mail-dark
+             'bg-gradient)
+   (color-of mail-dark
+             'ink)
+   (color-of mail-dark
+             'panel)
+   (color-of mail-dark
+             'panel-border)
+   (color-of mail-dark
+             'panel-shadow)
+   (color-of mail-dark
+             'heading)
+   (color-of mail-dark
+             'ink)
+   (color-of mail-dark
+             'muted)
+   (color-of mail-dark
+             'inner)
+   (color-of mail-dark
+             'inner-border)
+   (color-of mail-dark
+             'rule)
+   (color-of mail-dark
+             'accent)
+   (color-of mail-dark
+             'accent-ink)
+   (color-of mail-dark
+             'accent)))
 
 ;; What a message's <head> holds: the fonts, then the dark-mode polish.  Kept
 ;; deliberately tiny, because everything a reader has to see is inline.
 (define (mail-head-style)
-  (string-append mail-font-faces "\n" (dark-overrides)))
+  (string-append mail-font-faces "\n"
+                 (dark-overrides)))

@@ -39,14 +39,18 @@
 (define (non-empty-collection? x)
   "Whether X is a list or vector with at least one element."
   (cond
-    ((vector? x) (> (vector-length x) 0))
-    ((list? x) (pair? x))
+    ((vector? x)
+     (> (vector-length x) 0))
+    ((list? x)
+     (pair? x))
     (else #f)))
 
 (define (field b name)
   "The string field NAME of body B, or #f when it is missing or empty."
   (let ((v (assoc-ref b name)))
-    (and v (string? v) (not (string-null? v)) v)))
+    (and v
+         (string? v)
+         (not (string-null? v)) v)))
 
 ;; Artanis hands the request body over as bytes; a body that arrived as a
 ;; string (a form post, another version) is read as it is.  Either way the
@@ -54,25 +58,28 @@
 (define (body-string rc)
   (let ((b (rc-body rc)))
     (cond
-      ((string? b) b)
-      ((bytevector? b) (bytevector->string b "utf-8"))
+      ((string? b)
+       b)
+      ((bytevector? b)
+       (bytevector->string b "utf-8"))
       (else (format #f "~a" b)))))
 
 ;; A JSON answer with a status of its own.  The body is turned into a string
 ;; here, because `:mime' cannot set a status and `response-emit' cannot measure
 ;; a bare alist -- handing it one answers 500 instead of the status asked for.
-(define* (json-response body #:key (status 200))
+(define* (json-response body
+                        #:key (status 200))
   (response-emit (scm->json-string body)
                  #:status status
-                 #:headers '((content-type . (application/json)))))
+                 #:headers '((content-type application/json))))
 
 (define (bad-request rc message)
-  (json-response `((message . ,message))
+  (json-response `((message unquote message))
                  #:status 400))
 
 (define (server-error rc message)
   (display message)
-  (json-response `((message . ,message))
+  (json-response `((message unquote message))
                  #:status 500))
 
 (post "/api/v1/tasks"
@@ -89,30 +96,31 @@
                         (uid (generate-string-uuid))
                         (now (current-time)))
                    (cond
-                     ((not (and (list? b) (pair? b)))
+                     ((not (and (list? b)
+                                (pair? b)))
                       (bad-request rc
-                                   "the request body must be a JSON object with the task's fields"))
+                       "the request body must be a JSON object with the task's fields"))
                      ((not (equal? task-type "send-email"))
                       (bad-request rc
                                    (format #f
-                                           "unsupported task-type ~s: this deployment implements only \"send-email\""
-                                           task-type)))
+                                    "unsupported task-type ~s: this deployment implements only \"send-email\""
+                                    task-type)))
                      ((not (memq (string->symbol (or template ""))
                                  known-templates))
                       (bad-request rc
-                                   (format #f "unknown template ~s: known templates are ~a"
-                                           template
-                                           (string-join (map symbol->string
-                                                             known-templates)
-                                                        ", "))))
+                                   (format #f
+                                    "unknown template ~s: known templates are ~a"
+                                    template
+                                    (string-join (map symbol->string
+                                                      known-templates) ", "))))
                      ;; JSON arrays arrive as vectors from `json-string->scm',
                      ;; so both readings of a list are accepted here.
                      ((not (non-empty-collection? recipients))
                       (bad-request rc
-                                   "recipients must be a non-empty list of {name, address} objects"))
+                       "recipients must be a non-empty list of {name, address} objects"))
                      ((not (list? template-vars))
                       (bad-request rc
-                                   "template-vars must be a JSON object of the template's variables"))
+                       "template-vars must be a JSON object of the template's variables"))
                      ((not (field b "sender-address"))
                       (bad-request rc "sender-address is required"))
                      ((not (field b "subject"))
@@ -136,23 +144,23 @@
                                                         ""))
                                        (sender-address unquote
                                                        (field b
-                                                              "sender-address"))
+                                                        "sender-address"))
                                        (subject unquote
                                                 (field b "subject"))
                                        (recipients unquote
-                                                   (scm->json-string recipients))
+                                                   (scm->json-string
+                                                    recipients))
                                        (created-at unquote now)
                                        (attempts . 0)
                                        (last-error . "")))
-                        (json-response
-                         `((message . "successfully saved task to pingwing system")
-                           (id . ,uid))
-                         #:status 201))))))
+                        (json-response `((message . "successfully saved task to pingwing system")
+                                         (id unquote uid))
+                                       #:status 201))))))
                (lambda (key . args)
                  (server-error rc
                                (format #f
-                                       "error saving task in pingwing system: ~a ~a"
-                                       key args))))))
+                                "error saving task in pingwing system: ~a ~a"
+                                key args))))))
 
 ;; A shallow liveness probe for a reverse proxy or an uptime check.  It needs
 ;; no mail credentials and does not touch the database, so it answers exactly
@@ -170,25 +178,46 @@
      #:mime 'json
      (lambda (rc)
        (define (public-task t)
-         `((id . ,(assq-ref t 'id))
-           (task-status . ,(assq-ref t 'task-status))
-           (task-type . ,(assq-ref t 'task-type))
-           (template . ,(assq-ref t 'template))
-           (sender-address . ,(assq-ref t 'sender-address))
-           (subject . ,(assq-ref t 'subject))
-           (attempts . ,(assq-ref t 'attempts))
-           (last-error . ,(assq-ref t 'last-error))
-           (created-at . ,(assq-ref t 'created-at))
-           (updated-at . ,(assq-ref t 'updated-at))))
+         `((id unquote
+               (assq-ref t
+                         'id))
+           (task-status unquote
+                        (assq-ref t
+                                  'task-status))
+           (task-type unquote
+                      (assq-ref t
+                                'task-type))
+           (template unquote
+                     (assq-ref t
+                               'template))
+           (sender-address unquote
+                           (assq-ref t
+                                     'sender-address))
+           (subject unquote
+                    (assq-ref t
+                              'subject))
+           (attempts unquote
+                     (assq-ref t
+                               'attempts))
+           (last-error unquote
+                       (assq-ref t
+                                 'last-error))
+           (created-at unquote
+                       (assq-ref t
+                                 'created-at))
+           (updated-at unquote
+                       (assq-ref t
+                                 'updated-at))))
        (catch #t
               (lambda ()
                 (let* ((repo (make-sqlite-task-repository))
                        (limit (string->number (or (get-from-qstr rc "limit")
                                                   "50")))
-                       (tasks (get-recent-tasks repo (or limit 50))))
+                       (tasks (get-recent-tasks repo
+                                                (or limit 50))))
                   (json-response (list->vector (map public-task tasks)))))
               (lambda (key . args)
                 (server-error rc
                               (format #f
-                                      "error listing tasks from pingwing system: ~a ~a"
-                                      key args))))))
+                               "error listing tasks from pingwing system: ~a ~a"
+                               key args))))))

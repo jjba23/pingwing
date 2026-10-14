@@ -46,22 +46,25 @@
 (define letter-body
   (apply string-append
          (make-list 40
-                    (string-append
-                     "Dear Josep,\n"
-                     "The résumé you uploaded is ready to read:\n"
-                     "https://lucidplan.example.org/x/ticket/12\n"
+                    (string-append "Dear Josep,\n"
+                     "The résumé you uploaded is ready to read:
+"
+                     "https://lucidplan.example.org/x/ticket/12
+"
                      "Kind regards,\nPingwing\n\n"))))
 
 (define letter-html
   (string-append "<html><body><p>Dear Josep,</p><p>"
-                 (apply string-append (make-list 40 "<p>résumé</p>"))
-                 "</body></html>"))
+                 (apply string-append
+                        (make-list 40 "<p>résumé</p>")) "</body></html>"))
 
-(define non-ascii-subject "Nieuwe opmerking van Jösef over „resumé” — bekijk het")
+(define non-ascii-subject
+  "Nieuwe opmerking van Jösef over „resumé” — bekijk het")
 
 ;;; ====== the database a batch is read from ======
 
-(define migrations-directory "resources/migrations/sqlite")
+(define migrations-directory
+  "resources/migrations/sqlite")
 
 (define bench-database
   (string-append (or (getenv "TMPDIR") "/tmp")
@@ -80,37 +83,41 @@
               (let ((status (system (format #f "sqlite3 ~s < ~s"
                                             bench-database migration))))
                 (unless (zero? status)
-                  (error "could not apply a pingwing migration"
-                         migration status))))
+                  (error "could not apply a pingwing migration" migration
+                         status))))
             (sort (map (lambda (name)
                          (string-append migrations-directory "/" name))
-                       (filter (lambda (name) (string-suffix? ".sql" name))
-                               (scandir migrations-directory)))
-                  string<?)))
+                       (filter (lambda (name)
+                                 (string-suffix? ".sql" name))
+                               (scandir migrations-directory))) string<?)))
 
 (apply-schema!)
 (database-path bench-database)
 
-(define repository (make-sqlite-task-repository))
+(define repository
+  (make-sqlite-task-repository))
 
 ;; A queue with a sweep's worth of work in it, which is what the batch reading
 ;; below is timed against.
 (define (queue-row n)
-  `((id . ,(format #f "bench-~a" n))
+  `((id unquote
+        (format #f "bench-~a" n))
     (task-status . "pending")
     (task-type . "send-email")
     (template . "lucidplan-new-ticket")
     (template-vars . "{\"ticket-human-id\":12,\"ticket-title\":\"Fix the SMTP retry\"}")
     (sender-name . "Lucidplan")
     (sender-address . "noreply@example.org")
-    (subject . ,non-ascii-subject)
+    (subject unquote non-ascii-subject)
     (recipients . "[{\"name\":\"Josep\",\"address\":\"j@x.y\"}]")
-    (created-at . ,n)
+    (created-at unquote n)
     (attempts . 0)
     (last-error . "")))
 
 (define (fill-queue! count)
-  (for-each (lambda (n) (insert-task repository (queue-row n)))
+  (for-each (lambda (n)
+              (insert-task repository
+                           (queue-row n)))
             (iota count)))
 
 (fill-queue! 500)
@@ -120,12 +127,14 @@
 (define encoding-benchmark
   (benchmark #:name "quoted-printable: a notification-sized body"
              #:runs 5
-             #:thunk (lambda () (quoted-printable-encode letter-body))))
+             #:thunk (lambda ()
+                       (quoted-printable-encode letter-body))))
 
 (define header-benchmark
   (benchmark #:name "rfc2047: a non-ASCII subject"
              #:runs 5
-             #:thunk (lambda () (rfc2047-encode non-ascii-subject))))
+             #:thunk (lambda ()
+                       (rfc2047-encode non-ascii-subject))))
 
 (define message-benchmark
   (benchmark #:name "build-mail-message: the whole message, both parts"
@@ -133,7 +142,8 @@
              #:thunk (lambda ()
                        (build-mail-message #:id "bench-id"
                                            #:from-name "Lucidplan"
-                                           #:from-address "noreply@example.org"
+                                           #:from-address
+                                           "noreply@example.org"
                                            #:to-name "Josep"
                                            #:to-address "j@x.y"
                                            #:subject non-ascii-subject
@@ -153,7 +163,8 @@
 (define batch-benchmark
   (benchmark #:name "sqlite: reading a sweep's batch of 16"
              #:runs 5
-             #:thunk (lambda () (get-pending-tasks repository 16))))
+             #:thunk (lambda ()
+                       (get-pending-tasks repository 16))))
 
 (define claim-benchmark
   (benchmark #:name "sqlite: claiming tasks, 200 of them"
@@ -163,12 +174,14 @@
                        ;; back, so each run claims the same tasks rather than
                        ;; finding nothing left to take.
                        (for-each (lambda (task)
-                                   (claim-task-by-id repository (assq-ref task 'id)))
+                                   (claim-task-by-id repository
+                                                     (assq-ref task
+                                                               'id)))
                                  (get-pending-tasks repository 200))
                        (for-each (lambda (n)
-                                   (update-task-by-id
-                                    repository (format #f "bench-~a" n)
-                                    '((task-status . "pending"))))
+                                   (update-task-by-id repository
+                                                      (format #f "bench-~a" n)
+                                                      '((task-status . "pending"))))
                                  (iota 200)))))
 
 (define (spec)
