@@ -3,3 +3,4 @@ pingwing.db*
 env.scm
 tmp/*
 *.log
+reports/

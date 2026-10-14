@@ -47,7 +47,9 @@ pingwing is built and run with [[https://guix.gnu.org/][GNU Guix]], and the repo
 direnv allow      # or: guix shell -m manifest.scm
 #+end_src
 
-That environment has Guile, GNU Artanis, ~guile-kracht~, ~guile-curl~, ~guile-dbd-sqlite3~, ~guile-uuid~, SQLite and ~maak~ -- everything the tasks below reach for.
+That environment has Guile, GNU Artanis, ~guile-kracht~ (which builds every statement), ~guile-sqlite3~ (which binds its values), ~guile-curl~, ~guile-uuid~, ~guile-veritas~ (the test runner), ~mutastructura~ (the migrations), SQLite and ~maak~ -- everything the tasks below reach for.
+
+The libraries pingwing shares with its neighbours are pinned in ~manifest.scm~ at the versions [[https://codeberg.org/jjba23/byggsteg][byggsteg]] and lucidplan use -- ~guile-kracht~ 0.3.0 and ~guile-veritas~ 0.7.0 among them -- rather than taken from the channel, which lags behind what the projects actually run.  A fix made against one of the projects is then a fix made against all of them.
 
 ** Configuration: ~env.scm~
 
@@ -69,7 +71,15 @@ maak init-db        # first run: create the file and apply every migration
 maak migrate        # later runs: apply only the migrations not yet applied
 #+end_src
 
-~init-db~ deletes whatever database is there and builds an empty one, so it is the first command of a new deployment and never the upgrade path.  A deployment with data runs ~maak migrate~, which is safe to run again: it records each migration it applies in a ~schema_migrations~ table and skips the ones already recorded.  SQLite is left in WAL mode, which is what makes the concurrent reads and the worker's writes play nicely.
+~init-db~ deletes whatever database is there and builds an empty one, so it is the first command of a new deployment and never the upgrade path.  A deployment with data runs ~maak migrate~, which is safe to run again.
+
+Both hand the work to [[https://codeberg.org/jjba23/mutastructura][mutastructura]], which owns the migrations and the record of what has been applied:
+
+- the migrations are the ~*.sql~ files under ~resources/migrations/sqlite/~, oldest first as their names sort -- ~YYYY-MM-DD_HH:MM:SS_what-it-does.sql~;
+- what has run is recorded by name *and checksum* in a ~migrations_history~ table, so a file edited after it was applied is reported rather than quietly re-run;
+- each migration is executed inside a transaction: one that fails leaves the database exactly as it was, rather than half-migrated.
+
+There is no runner of pingwing's own, deliberately: a second answer to "which migrations has this database seen?" is a second answer that can disagree with the first.  SQLite is left in WAL mode, which is what makes the concurrent reads and the worker's writes play nicely.
 
 ** Starting the server
 
@@ -307,7 +317,22 @@ This is the same shape [[https://codeberg.org/jjba23/byggsteg][byggsteg]]'s queu
 
 There is one wrinkle worth naming.  A send is libcurl's to make, and libcurl's easy interface *blocks the thread it runs on*.  A fiber that called it directly would freeze the whole sweep behind one slow message, and the concurrency would be a lie.  So the blocking call is handed to a thread of its own, and the fiber waits on a condition that thread signals -- fibers for the orchestration and the back-pressure, a bounded handful of threads for the work that genuinely blocks.  The batch size and the concurrency are both settings, so a deployment tunes the pressure it puts on its mail server.
 
-Everything a single sweep touches the database through happens on the worker's thread, between the fibers' own suspensions, so the SQLite writes stay one-at-a-time without a lock of their own.
+The database is the one thing the fibers and the request handlers share, and it is shared carefully: one connection per file, and every statement taken and run under a mutex.  That is not a matter of taste -- guile-sqlite3 caches prepared statements per connection in a plain hash table, so two threads preparing statements at once can be handed each other's -- and it costs nothing here, since a statement is short and the long work (an SMTP conversation) happens outside the lock.
+
+----------------------------
+
+* The database layer: kracht, and values that are values
+
+Every statement pingwing sends arrives here built by [[https://codeberg.org/jjba23/kracht][kracht]]'s SQL module: a SQL string with ~?~ placeholders, plus the list of values to bind in their order.  The two travel separately all the way to SQLite, and it is SQLite that binds them -- so a subject with an apostrophe in it, an error message a mail server wrote, a value that spells out ~'; DROP TABLE tasks; --~: each is a value, and none of them can change the shape of the statement it travels in.
+
+That is the whole reason for the layer, and it is worth saying what it replaces.  Artanis' own ~DB-query~ hands one finished string to guile-dbi, which has no binding step at all; every value would have to be quoted and escaped into the text first, and the escaping would have to be right about every column, forever.  So pingwing talks to its SQLite file through ~guile-sqlite3~ -- the binding Artanis itself is configured to name -- and ~(pingwing sqlite util)~ owns the connection, the lock and the binding.
+
+Two consequences a contributor will meet straight away:
+
+- nothing is escaped on the way in or out, and nothing should be.  ~(pingwing query-escape)~ and the ~escape-str~/~unescape-str~ pair it offered are gone, along with the ~&apos;~ that old rows carried; the migration ~2026-10-14_13:00:00_unescape_task_text.sql~ takes that off the rows written before this change;
+- a status travels as the symbol the source spells it with (~(task-status . complete)~) and reaches the column as the text ~complete~: the layer maps booleans to 1 and 0 and symbols to their names, which is the one place Scheme values and SQLite values have to be introduced to one another.
+
+A reading that is not a plain condition list -- the stale-task sweep's ~updated_at IS NULL OR updated_at < ?~ -- is written with ~sql-parameterize~, the escape hatch meant for exactly that: the values are still bound, only the text is written by hand.
 
 ----------------------------
 
@@ -349,7 +374,7 @@ pingwing is a long-running process; the queue worker starts with the server and 
 
 ** The database
 
-SQLite in WAL mode: back up by copying ~pingwing.db~ (plus the ~-wal~ and ~-shm~ files) while the service is stopped, or use ~sqlite3 pingwing.db ".backup backup.db"~ while it runs.  The two migrations that build and extend the schema are under ~resources/migrations/sqlite/~ and are applied by ~maak migrate~.
+SQLite in WAL mode: back up by copying ~pingwing.db~ (plus the ~-wal~ and ~-shm~ files) while the service is stopped, or use ~sqlite3 pingwing.db ".backup backup.db"~ while it runs.  The migrations that build and extend the schema are under ~resources/migrations/sqlite/~ and are applied by ~maak migrate~, which is mutastructura; the ~migrations_history~ table is the record of what a deployment has run, and the fastest way to see where a database stands.
 
 ** Logs
 
@@ -363,11 +388,17 @@ The worker reports to stdout: each failed delivery with its reason, each requeue
 maak --list          # every task
 maak dev             # hot-reloading development server (watchexec + restart)
 maak test            # run the test suite
+maak test-benchmark  # run the benchmarks
 maak fmt             # format the Scheme sources the Guix way
 maak build-manual    # render this README to HTML
 #+end_src
 
-The tests under ~test/unit~ need neither a database nor a mail server: they cover the encodings that keep a message intact on the wire, the shape of the generated message, and what each template promises to say.
+The tests are [[https://codeberg.org/jjba23/veritas][Veritas]] suites, and where they sit is what tells the runner what they are:
+
+- ~test/veritas/unit/~ holds the specs ~maak test~ runs.  Each file names the module it must have for its position (~(veritas unit mail-spec)~), which is how the runner loads it; the encodings that keep a message intact on the wire, the shape of the message itself, what each template promises to say, and -- against a temporary SQLite file built from the project's own migrations -- what the task repository stores and reads back are all covered there.
+- ~test/veritas/benchmark/~ holds the benchmarks ~maak test-benchmark~ runs: what a notification-sized body costs to encode, and what a sweep's read and a claim cost through kracht and SQLite.
+
+Neither needs a mail server, and only the repository specs need a database -- one they make and fill themselves, under the temporary directory.
 
 ----------------------------
 

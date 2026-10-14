@@ -9,9 +9,6 @@
              ;; only for this file, not controllers/views
              (ice-9 threads)
              (ice-9 i18n)
-             (web request)
-             (web uri)
-             (rnrs io ports)
              (pingwing sqlite task)
              (pingwing domain task)
              (artanis utils))
@@ -82,28 +79,16 @@
   (use-modules (pingwing tasks)
                (pingwing sqlite task)
                (pingwing domain task))
-  (let* ( ;use dummy route so as to hook into Artanis request context
-          (mock-port (open-bytevector-input-port #vu8()))
-         (mock-request (build-request (string->uri
-                                       "http://localhost:50077/dummy-pipeline-context")
-                                      #:method 'POST
-                                      #:headers '()
-                                      #:port mock-port))
-         (mock-body (read-request-body mock-request))
-         ;; fake request context will be used to get DB connection
-         (rc (new-route-context mock-request mock-body))
-         (task-repo (make-sqlite-task-repository rc))
+  ;; The worker is a thread of its own with a repository of its own.  No route
+  ;; context is needed for it any more: the sqlite layer owns the connection
+  ;; and takes it from the Artanis configuration, the same way a request does.
+  (let* ((task-repo (make-sqlite-task-repository))
          (t (call-with-new-thread (lambda ()
                                     (pingwing-worker-thread #:settings
                                                             pingwing-settings
                                                             #:task-repo
                                                             task-repo)))))
     (set! worker-thread t)))
-
-;; define dummy route so that fake request-context can be used
-(post "/dummy-pipeline-context"
-      (lambda (rc)
-        "dummy"))
 
 ;; Add hook on before running the Artanis application to start the queue worker
 (run-before-run! start-worker)

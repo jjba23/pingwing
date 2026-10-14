@@ -40,9 +40,26 @@
           (org-html-export-to-html)
           (message "finished publishing the PingWing manual")))
 
-;; The SQL migrations, oldest first, as the file names sort.
-(define migrations-glob
-  "resources/migrations/sqlite/*.sql")
+;; Where the SQL migrations live, oldest first, as the file names sort.
+(define migrations-dir
+  "resources/migrations/sqlite")
+
+;; Quote TEXT the way a POSIX shell reads it back as TEXT: wrapped in single
+;; quotes, where every character is literal, with a single quote of its own
+;; closed, escaped and reopened.  A command that has to set a variable or pass
+;; a script of its own -- the benchmark run below -- needs this, since a shell
+;; is handed one string and would otherwise read the spaces as argument
+;; boundaries.
+(define (shell-quoted text)
+  (string-append
+   "'"
+   (apply string-append
+          (map (lambda (c)
+                 (if (eqv? c #\')
+                     "'\\''"
+                     (string c)))
+               (string->list text)))
+   "'"))
 
 ;; ====== Maak tasks ======
 
@@ -62,14 +79,16 @@
                                #:verbose? #t))
 
 (define (migrate)
-  "Apply the SQL migrations under resources/migrations/sqlite, once each.
+  "Bring the database up to the schema the source in front of it expects.
 
-The runner keeps its own record of what it has applied, so this is how a
-running deployment is brought up to the schema the source in front of it
-expects -- and it is safe to run again."
-  (time-machine-manifest-shell (list (~ "bash scripts/migrate.sh ~a"
-                                        pingwing-db))
-                               #:verbose? #t))
+Mutastructura does the work: it keeps its own ledger of which migration has
+run, applies the rest oldest first, and runs each one in a transaction, so a
+migration that fails leaves the database as it was.  Running this again is
+safe -- the migrations already recorded are skipped."
+  (time-machine-manifest-shell
+   (list (~ "mutastructura --database sqlite3 --connection ~a --migrations ~a"
+            pingwing-db migrations-dir))
+   #:verbose? #t))
 
 (define (fmt)
   "Format Scheme source code files according to the Guix style guide."
@@ -114,10 +133,10 @@ expects -- and it is safe to run again."
 (define (init-db)
   "Initialize a new database: the file, WAL mode, and the schema.
 
-The database that comes out is empty and ready -- every migration under
-resources/migrations/sqlite is applied to it in file order -- so this is the
-first command of a new deployment.  It deletes whatever file is already there,
-which is why a deployment that has data runs `maak migrate' instead."
+The database that comes out is empty and ready, every migration applied to it
+in file order, so this is the first command of a new deployment.  It deletes
+whatever file is already there, which is why a deployment that has data runs
+`maak migrate' instead."
   (delete-file-recursively pingwing-db)
   (delete-file-recursively (~ "~a-shm" pingwing-db))
   (delete-file-recursively (~ "~a-wal" pingwing-db))
@@ -130,6 +149,29 @@ which is why a deployment that has data runs `maak migrate' instead."
   ($ '("scp wolk-jjba:/etc/byggsteg/job-clone/pingwing/trunk/env.scm .")))
 
 (define (test)
-  "Run the project's test suite."
-  (time-machine-manifest-shell (list "guile -L ./lib -L . test/run-tests.scm")
+  "Run the project's test suite with Veritas.
+
+The runner scans ./test for suites and loads each spec as a module, which is
+why the specs under test/veritas/unit are named `(veritas unit ...)': that is
+the name the runner derives from where they sit, and `-L ./test' is what lets
+Guile resolve it."
+  (time-machine-manifest-shell (list "guile -L ./lib -L . -L ./test"
+                                     "-c '(begin (use-modules (veritas runner)) (run-tests))'")
                                #:verbose? #t))
+
+(define (test-benchmark)
+  "Run the project's benchmarks with Veritas.
+
+The benchmarks live under test/veritas/benchmark, the second category the same
+runner understands; naming it here is what makes them run, since an ordinary
+`maak test' looks for unit specs only.
+
+The run is handed to `sh -c' rather than passed as arguments: the type of run
+is set through the environment, and a Guix shell runs the program it is given
+without a shell in between, so `VERITAS_TEST_TYPE=benchmark' would be read as
+the name of a program."
+  (time-machine-manifest-shell
+   (list "sh -c"
+         (shell-quoted
+          "VERITAS_TEST_TYPE=benchmark guile -L ./lib -L . -L ./test -c '(begin (use-modules (veritas runner)) (run-tests))'"))
+   #:verbose? #t))

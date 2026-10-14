@@ -31,8 +31,7 @@
         (srfi srfi-1)
         (artanis artanis)
         (pingwing domain task)
-        (pingwing sqlite task)
-        (pingwing query-escape))
+        (pingwing sqlite task))
 
 (define known-templates
   '(password-reset system-alert lucidplan-new-ticket))
@@ -119,28 +118,29 @@
                      ((not (field b "subject"))
                       (bad-request rc "subject is required"))
                      (else
-                      (let ((task-repo (make-sqlite-task-repository rc)))
+                      ;; The values go in as they arrived.  Nothing is escaped
+                      ;; into the statement here: the sqlite layer binds every
+                      ;; value, so a subject is a subject and not a piece of
+                      ;; SQL, and a task read back is the task that was sent.
+                      (let ((task-repo (make-sqlite-task-repository)))
                         (insert-task task-repo
                                      `((id unquote uid)
-                                       (task-status . pending)
+                                       (task-status . "pending")
                                        (task-type unquote task-type)
-                                       (template unquote (escape-str template))
+                                       (template unquote template)
                                        (template-vars unquote
-                                                      (escape-str
-                                                       (scm->json-string
-                                                        template-vars)))
+                                                      (scm->json-string
+                                                       template-vars))
                                        (sender-name unquote
-                                                    (escape-str (or (field b
-                                                                           "sender-name")
-                                                                    "")))
+                                                    (or (field b "sender-name")
+                                                        ""))
                                        (sender-address unquote
-                                                       (escape-str (field b
-                                                                          "sender-address")))
+                                                       (field b
+                                                              "sender-address"))
                                        (subject unquote
-                                                (escape-str (field b "subject")))
+                                                (field b "subject"))
                                        (recipients unquote
-                                                   (escape-str
-                                                    (scm->json-string recipients)))
+                                                   (scm->json-string recipients))
                                        (created-at unquote now)
                                        (attempts . 0)
                                        (last-error . "")))
@@ -182,7 +182,7 @@
            (updated-at . ,(assq-ref t 'updated-at))))
        (catch #t
               (lambda ()
-                (let* ((repo (make-sqlite-task-repository rc))
+                (let* ((repo (make-sqlite-task-repository))
                        (limit (string->number (or (get-from-qstr rc "limit")
                                                   "50")))
                        (tasks (get-recent-tasks repo (or limit 50))))

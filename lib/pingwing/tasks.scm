@@ -50,22 +50,20 @@
   #:use-module (srfi srfi-1)
   #:use-module (ice-9 string-fun)
   #:use-module (json)
-  #:use-module (artanis db)
-  #:use-module (artanis ssql)
-  #:use-module (srfi srfi-64)
   #:use-module (kracht prelude)
   #:use-module (pingwing mail)
   #:use-module (pingwing base64)
   #:use-module (pingwing templates password-reset)
   #:use-module (pingwing templates system-alert)
   #:use-module (pingwing templates lucidplan-new-ticket)
-  #:use-module (pingwing query-escape)
   #:use-module (ice-9 pretty-print)
   #:use-module (rnrs bytevectors)
   #:use-module (rnrs io ports)
   #:use-module (artanis artanis)
   #:use-module (web request)
   #:use-module (web uri)
+  #:use-module (scriba scriba)
+  #:use-module (scriba auto)
   #:use-module (pingwing sqlite task)
   #:use-module (pingwing domain task)
   ;; `(fibers)' and `(ice-9 threads)' both name `sleep'.  The worker paces
@@ -85,6 +83,14 @@
                                    html-body-from-task
                                    run-sweep run-one-task run-tasks-concurrently
                                    call-blocking))
+
+;;; --------------------------------------------------------------- logging
+
+;; The queue's own logger, configured the way byggsteg's is: from the
+;; environment, with a human-readable console layout unless a deployment asks
+;; for JSON.  Every line the worker writes goes through it.
+(define log
+  (scriba-auto-logger))
 
 ;;; ------------------------------------------------------------- settings
 
@@ -127,7 +133,7 @@ the air at once even though libcurl blocks the thread it runs on."
   (string->symbol (assq-ref task 'template)))
 
 (define (task-vars task)
-  (json-string->scm (unescape-str (assq-ref task 'template-vars))))
+  (json-string->scm (assq-ref task 'template-vars)))
 
 (define (template-var v key)
   (assoc-ref v key))
@@ -197,12 +203,11 @@ the air at once even though libcurl blocks the thread it runs on."
                            #:access-secret (assoc-ref v 'access-secret)
                            #:access-server (assoc-ref v 'access-server)
                            #:access-port (assoc-ref v 'access-port)
-                           #:from-name (unescape-str (assq-ref task 'sender-name))
-                           #:from-address (unescape-str
-                                           (assq-ref task 'sender-address))
+                           #:from-name (assq-ref task 'sender-name)
+                           #:from-address (assq-ref task 'sender-address)
                            #:to-name (assoc-ref recipient "name")
                            #:to-address (assoc-ref recipient "address")
-                           #:subject (unescape-str (assq-ref task 'subject))
+                           #:subject (assq-ref task 'subject)
                            #:body (body-from-task #:task task)
                            #:body-html (html-body-from-task #:task task)
                            #:attempts (setting settings 'mail 'attempts 3)
@@ -219,7 +224,7 @@ the air at once even though libcurl blocks the thread it runs on."
   "Handle one task: build its message, deliver it to each recipient, and write
 down what happened.  A task that is still failing but has retries left goes
 back to `pending'; one that has used them up goes to `failed' with the reasons."
-  (log-info (gettext "processing pingwing task"))
+  (log-info log (gettext "processing pingwing task"))
   (let* ((id (assq-ref task 'id))
          (template (task-template task))
          (this-attempt (+ 1 (or (assq-ref task 'attempts) 0)))
@@ -244,7 +249,7 @@ back to `pending'; one that has used them up goes to `failed' with the reasons."
                                (updated-at unquote now))))
         (let* ((recipients (vector->list
                             (json-string->scm
-                             (unescape-str (assq-ref task 'recipients)))))
+                             (assq-ref task 'recipients))))
                (results (map (lambda (recipient)
                                (do-send-mail #:task task
                                              #:recipient recipient
@@ -253,7 +258,7 @@ back to `pending'; one that has used them up goes to `failed' with the reasons."
                (failures (filter (lambda (r) (not (car r))) results)))
           (cond
             ((null? failures)
-             (log-info (gettext "pingwing task complete"))
+             (log-info log (gettext "pingwing task complete"))
              (update-task-by-id task-repo id
                                 `((task-status . complete)
                                   (attempts unquote this-attempt)
@@ -362,7 +367,7 @@ batch of pending tasks concurrently.  Answers the number of tasks it ran."
                                                 "\n  could not claim task ~a: ~a ~s\n"
                                                 (assq-ref task 'id) key args)))))
                     tasks)
-          (log-info (gettext "running a batch of pingwing tasks: ~a")
+          (log-info log (gettext "running a batch of pingwing tasks: ~a")
                     (length tasks))
           (run-fibers
            (lambda ()
@@ -377,7 +382,7 @@ batch of pending tasks concurrently.  Answers the number of tasks it ran."
 
 (define* (pingwing-worker-thread #:key task-repo settings)
   "The queue worker: sweep, rest, sweep again, for as long as the process lives."
-  (log-info (gettext "initializing pingwing queue worker"))
+  (log-info log (gettext "initializing pingwing queue worker"))
   (catch #t
          (lambda () (mkdir (setting settings 'mail 'tmp-dir "tmp")))
          (lambda (key . args) '()))
