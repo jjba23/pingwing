@@ -29,7 +29,7 @@ Public License v3 or newer, and it is a key component of the
 - 💾 *Read the source (and send PRs/patches):* [[https://codeberg.org/jjba23/pingwing][codeberg.org/jjba23/pingwing]]
 - 📖 *Read this document rendered as HTML:* ~maak build-manual~ renders it to ~README.html~ next to it
 - 🗺️ *Follow what is next:* [[https://lucidplan.jointhefreeworld.org/tickets/pingwing][the PingWing board]]
-- 🧩 *See what it serves:* [[https://codeberg.org/jjba23/lucidplan][lucidplan]] and [[https://codeberg.org/jjba23/wikimusic][wikimusic]] are the neighbours that send through it
+- 🧩 *See what it serves:* [[https://codeberg.org/jjba23/lucidplan][lucidplan]], [[https://codeberg.org/jjba23/byggsteg][byggsteg]] and [[https://codeberg.org/jjba23/wikimusic][wikimusic]] are the neighbours that send through it
 
 If you like my work, please support me by [[https://bmc.link/jjbigorra][buying me a cup of coffee ☕]] so I can continue with a lot of motivation.
 
