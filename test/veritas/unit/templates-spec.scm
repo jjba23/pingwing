@@ -111,6 +111,44 @@
                                   #:expect plain
                                   #:got "Pingwing")))))
 
+;;; ====== the markup a mail client is handed ======
+
+;; `sxml->xml' writes an element that has no children as a self-closing tag --
+;; `<div ... />' -- which is XML, not HTML: an HTML parser reads it as an
+;; *opening* tag and makes everything after it its children.  A message that did
+;; that arrived as an empty card, because the panel's whole body ended up inside
+;; the six-pixel accent bar it is clipped by.  So it is asserted rather than
+;; assumed, over every element that may hold something: only the void elements of
+;; a document's head are allowed to close themselves.
+(define self-closed-non-void
+  "<(div|span|p|table|tr|td|th|h1|h2|a)[^>]*/>")
+
+(define markup-suite
+  (let ((ticket (lucidplan-new-ticket-html-template #:system-name "Lucidplan"
+                 #:project-name "Pingwing"
+                 #:ticket-human-id 12
+                 #:ticket-title "Fix the SMTP retry"
+                 #:ticket-url "https://lucidplan/x/ticket/12"))
+        (reset (password-reset-html-template #:system-name "WikiMusic"
+                                             #:user "joe@x.y"
+                                             #:reset-link "https://x/y"))
+        (alert (system-alert-html-template #:system-name "X"
+                                           #:alert-value "disk full")))
+    (suite "the markup a mail client is handed"
+           (test "nothing is closed before it has been opened"
+                 (assert-not-matches #:name
+                  "the ticket notice is not swallowed by its own accent"
+                  #:pattern self-closed-non-void
+                  #:got ticket)
+                 (assert-not-matches #:name
+                  "the reset mail is not swallowed by its own rule"
+                  #:pattern self-closed-non-void
+                  #:got reset)
+                 (assert-not-matches #:name
+                                     "the alert is not swallowed either"
+                                     #:pattern self-closed-non-void
+                                     #:got alert)))))
+
 ;;; ====== the look ======
 
 (define styling-suite
@@ -138,4 +176,4 @@
 
 (define (spec)
   (veritas-run password-reset-suite system-alert-suite new-ticket-suite
-               styling-suite))
+               markup-suite styling-suite))

@@ -1,59 +1,286 @@
 #+title: PingWing
+#+subtitle: the free and open Lisp-powered notification nexus
 #+author: Josep Bigorra
 #+email: jjbigorra@gmail.com
 #+language: en
-#+options: toc:2 num:2
+#+options: toc:nil num:nil
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="https://jointhefreeworld.org/static/css/jointhefreeworld.css" />
 
+[[https://jointhefreeworld.org/ggg/dist/scheme-guile.svg]] [[https://jointhefreeworld.org/ggg/dist/gnu-guix.svg]] [[https://jointhefreeworld.org/ggg/dist/maak.svg]] [[https://jointhefreeworld.org/ggg/dist/gnu-artanis.svg]]
+[[https://jointhefreeworld.org/ggg/dist/license-agpl3+.svg]] [[https://jointhefreeworld.org/ggg/dist/license-fdl13+.svg]] [[https://jointhefreeworld.org/ggg/dist/jointhefreeworld-org.svg]] [[https://img.shields.io/badge/CI-Byggsteg%20%7C%20Woodpecker-2ea44f.svg]]
 
-[[https://jointhefreeworld.org/ggg/dist/scheme-guile.svg]]  [[https://jointhefreeworld.org/ggg/dist/gnu-guix.svg]]  [[https://jointhefreeworld.org/ggg/dist/maak.svg]]   [[https://jointhefreeworld.org/ggg/dist/license-agpl3+.svg]]  [[https://jointhefreeworld.org/ggg/dist/license-fdl13+.svg]] [[https://jointhefreeworld.org/ggg/dist/gnu-artanis.svg]]
+/the free and open Lisp-powered notification nexus/
 
-/The free and open Lisp-powered notification nexus/
+*One HTTP call in, a delivered message out.*  Your programs post a little JSON
+("send this template, filled with these values, from this address, to these
+people") to pingwing, and pingwing does the rest -- the queueing, the SMTP
+conversation, the retries and the record of what happened.  It is the part of a
+platform that nobody wants to write five times; write it once, in Scheme, and
+point every service at it.
+
+It is free software (free as in freedom), licensed under the GNU Affero General
+Public License v3 or newer, and it is a key component of the
+[[https://jointhefreeworld.org/][jointhefreeworld]] ecosystem.
+
+#+name: pingwing-demo
+#+caption: Three of the messages pingwing sends -- the ticket notice for lucidplan, a password reset and a system alert -- rendered by the code itself for a mail client, and then the ticket notice again as a client that asks for a dark palette.
+[[https://codeberg.org/jjba23/pingwing/raw/branch/trunk/docs/pingwing-demo.gif]]
+
+- 💾 *Read the source (and send PRs/patches):* [[https://codeberg.org/jjba23/pingwing][codeberg.org/jjba23/pingwing]]
+- 📖 *Read this document rendered as HTML:* ~maak build-manual~ renders it to ~README.html~ next to it
+- 🗺️ *Follow what is next:* [[https://lucidplan.jointhefreeworld.org/tickets/pingwing][the PingWing board]]
+- 🧩 *See what it serves:* [[https://codeberg.org/jjba23/lucidplan][lucidplan]] and [[https://codeberg.org/jjba23/wikimusic][wikimusic]] are the neighbours that send through it
 
 If you like my work, please support me by [[https://bmc.link/jjbigorra][buying me a cup of coffee ☕]] so I can continue with a lot of motivation.
 
-----------------------
+#+TOC: headlines 1
 
-Do you want to work the complexity away of sending e-mail, Slack or other notifications, from every other program? Specially if you use a (micro)service oriented architecture?
+This document is the manual.  There is no separate one: what follows is
+everything a deployer, an integrator and a contributor needs, in one place, so
+the two can never come to say different things.  The picture above is not a
+mock-up either -- it is drawn by the template modules the delivery path itself
+uses (see [[#the-demo-picture-and-how-to-redraw-it][The demo picture, and how to redraw it]]).
 
-pingwing, a key component of the jointhefreeworld ecosystem, emerges as a robust and extensible solution. Architected in the elegant and powerful dialect of Lisp known as Guile Scheme, this tool gives you power (via REST API and more) to become the central notification system for your platform.
+------------------------
 
-At its core, pingwing exposes a programmatic interface (and more!) allowing you to dispatch messages, electronic mail, and critical alerts with finesse. Forget juggling disparate notification mechanisms; pingwing harmonizes these streams, routing them to your chosen endpoints.
+* What pingwing is
 
-Initial support includes SMTP for email delivery, with a pending integration for Slack (expect webhook wizardry soon!).
+Do you want to work the complexity away of sending e-mail, Slack or other
+notifications, from every other program?  Specially if you use a
+(micro)service oriented architecture?
 
-The architecture is designed for future expansion, promising connectivity to a diverse range of notification sinks.
+pingwing emerges as a robust and extensible answer.  Architected in the elegant
+and powerful dialect of Lisp known as Guile Scheme, this tool gives you power
+(via a REST API and more) to become the central notification system for your
+platform.  At its core, pingwing exposes a programmatic interface allowing you
+to dispatch messages, electronic mail, and critical alerts with finesse.  Forget
+juggling disparate notification mechanisms; pingwing harmonizes these streams,
+routing them to your chosen endpoints.
 
-This project is powered by Lisp (Guile Scheme), ~curl~ , ~libcurl~, ~make~ , SXML and the GNU Artanis web framework, SQLite, among others.
+Initial support includes SMTP for email delivery, with a pending integration for
+Slack (expect webhook wizardry soon!).  The architecture is designed for future
+expansion, promising connectivity to a diverse range of notification sinks.  It
+is compatible with any SMTP provider you can think of, thanks to its simple and
+agnostic approach.
 
-[[https://jointhefreeworld.org/static-assets/pingwing/logo-small.png]]
+** What pingwing is, in one paragraph
+:PROPERTIES:
+:CUSTOM_ID: what-pingwing-is-in-one-paragraph
+:END:
 
-This tool is compatible with any SMTP provider you can think of, thanks to its simple and agnostic approach.
+A caller posts a *task* -- "send this template, filled with these variables,
+from this sender, to these recipients" -- to a small HTTP API and walks away.
+The task is written to SQLite and the request is over.  A background worker
+picks tasks up and delivers them over SMTP, with retries, and records what
+happened to each one.  Ingestion and delivery never share a process or a
+transaction, which is what lets a slow or downed mail server neither block nor
+lose the callers that keep posting.
 
-This document is the manual. There is no separate one: what follows is everything a deployer, an integrator and a contributor needs, in one place, so the two can never come to say different things.
+** Who it is for
+:PROPERTIES:
+:CUSTOM_ID: who-it-is-for
+:END:
 
-----------------------------
+- *Services that need to talk to people* -- password resets, invites, alerts,
+  ticket notices.  Any program that can make one HTTP request can send mail
+  through pingwing, in any language, on any stack.
+- *Platforms of several small programs*, where five of them should not each grow
+  their own SMTP client, retry logic and template engine.
+- *Lisp people*, who add a template by writing a few lines of Scheme rather than
+  filing a feature request.
+- *Self-hosters and freedom-lovers*, who want their mail going out through their
+  own account, on their own machine, under their own licence, with no account
+  anywhere else.
 
-* What pingwing is, in one paragraph
+** What it is built with
+:PROPERTIES:
+:CUSTOM_ID: what-it-is-built-with
+:END:
 
-A caller posts a *task* -- "send this template, filled with these variables, from this sender, to these recipients" -- to a small HTTP API and walks away.  The task is written to SQLite and the request is over.  A background worker picks tasks up and delivers them over SMTP, with retries, and records what happened to each one.  Ingestion and delivery never share a process or a transaction, which is what lets a slow or downed mail server neither block nor lose the callers that keep posting.
+Built with [[https://www.gnu.org/software/guile/][Guile Scheme]], [[https://artanis.dev/][GNU Artanis]], [[https://sqlite.org/][SQLite]], ~curl~ and ~libcurl~, SXML,
+[[https://codeberg.org/jjba23/kracht][kracht]] (which builds every SQL statement),
+[[https://codeberg.org/jjba23/mutastructura][mutastructura]] (which owns the
+migrations), [[https://codeberg.org/jjba23/veritas][veritas]] (the test runner),
+[[https://codeberg.org/jjba23/maak][maak]] (the tasks), GNU Guix, and ~make~.
 
-* Running
+** Two ways to start
+:PROPERTIES:
+:CUSTOM_ID: two-ways-to-start
+:END:
 
-** Dependencies and the development environment
+|----------------------------------+----------------------------------------------------------------|
+| *Wiring a program up to it?*     | Jump to [[#the-api][The API]] -- one POST is the whole integration.    |
+| *Running your own deployment?*   | [[#try-it-in-five-minutes][Try it in five minutes]], then [[#running-pingwing-yourself][Running pingwing yourself]]. |
+|----------------------------------+----------------------------------------------------------------|
 
-pingwing is built and run with [[https://guix.gnu.org/][GNU Guix]], and the repository ships its whole toolchain in ~manifest.scm~.  The ~.envrc~ is a single line, so with [[https://direnv.net/][direnv]] installed entering the directory is all it takes to be in the right environment:
+------------------------
 
-#+begin_src shell
+* Features
+
+- *One call, one task*: post JSON, get a ~201~ and the task's id back, and walk
+  away.  The id is also what appears in the subject of the mail, so a task and
+  the message it produced can be lined up.
+- *Ingestion and delivery never share a process or a transaction*: a slow or
+  downed mail server can neither block nor lose the callers that keep posting.
+- *A real queue, not a retry loop*: tasks are written as rows, claimed by a
+  sweep (~pending~ → ~processing~, so a task is never picked up twice), and run
+  concurrently on a fibers scheduler with a bounded amount of real blocking
+  handed to threads.
+- *Deliveries that survive the network*: retries on two clocks -- within one
+  delivery and across sweeps -- and a message is only ever called sent when the
+  SMTP server said it took it.
+- *What "failed" means is recorded*: the SMTP server's own words are kept in the
+  task's ~last_error~, so a look at the table is usually enough to know what is
+  wrong.
+- *A worker that can be restarted*: a task left ~processing~ by a process that
+  died is put back in the queue by the next sweep, so no message is lost to a
+  restart.
+- *Messages built to survive the wire*, not just the best case: RFC 2047
+  headers, an RFC 5322 date, a generated ~Message-ID~, a fresh MIME boundary per
+  message, quoted-printable over the UTF-8 bytes, CRLF line endings, soft-wrapped
+  long lines, an escaped leading dot, and header values stripped of line breaks
+  so nothing can inject a header of its own.
+- *One message per recipient*: every address is delivered to separately, so no
+  recipient can read the others' addresses off the envelope.
+- *Pretty mail*: a plain-text part and an HTML part built from SXML, styled
+  inline in the everforest palette the jointhefreeworld sites wear -- a frosted
+  panel over a soft gradient, a hairline of colour along the top, and a dark
+  palette for the clients that ask for one.
+- *Templates as Scheme modules*: adding one is a file, a name in a dispatch and
+  a name in a list.
+- *An API that refuses precisely*: a wrong request is answered ~400~ with a
+  sentence saying which field is wrong -- never quietly accepted and discovered
+  later as a mail that never came.
+- *Basic auth at the proxy, and nothing else*: no users table, no sessions, no
+  login, nothing to leak, because the callers are machines that already hold a
+  shared secret.
+- *No value is ever escaped*: every statement travels as SQL text with ~?~
+  placeholders and a list of values, and it is SQLite that binds them, so a
+  subject with an apostrophe in it cannot change the shape of anything.
+- *Migrations with a ledger*: mutastructura applies each migration in a
+  transaction and records it by name *and checksum*, so an edited migration is
+  reported rather than quietly re-run.
+- *Free Software*: contribute to its development or extend it with your own
+  custom features.
+
+------------------------
+
+* Try it in five minutes
+:PROPERTIES:
+:CUSTOM_ID: try-it-in-five-minutes
+:END:
+
+The short version, for the impatient.  There is no web page to open at the end
+of it -- pingwing is a service, and health is the first thing it will tell you.
+
+#+begin_src sh
+# 1. get the source
+git clone https://codeberg.org/jjba23/pingwing.git
+cd pingwing
+
+# 2. enter the project's environment (all dependencies, pinned)
+guix shell -m manifest.scm          # or simply: direnv allow
+
+# 3. make a database
+maak init-db
+
+# 4. run the server (and the queue worker with it) on http://localhost:50077
+maak server
+
+# 5. in another shell, ask it whether it is up
+curl -s http://localhost:50077/api/v1/health
+# {"status":"ok","service":"pingwing"}
+
+# 6. run the test suite
+maak test
+#+end_src
+
+Step 2 is the only one that needs anything installed beforehand ([[https://guix.gnu.org/][GNU Guix]]);
+steps 3 to 6 are one command each.  ~maak --list~ names every other task the
+project defines, and [[#running-pingwing-yourself][Running pingwing yourself]] picks up where this leaves off:
+the SMTP account a delivery needs, the proxy that authenticates its callers, and
+how to run it as a daemon.
+
+------------------
+
+* Requirements, and what is pinned for you
+:PROPERTIES:
+:CUSTOM_ID: requirements-and-what-is-pinned-for-you
+:END:
+
+** What you need
+:PROPERTIES:
+:CUSTOM_ID: what-you-need
+:END:
+
+pingwing is built and run with [[https://guix.gnu.org/][GNU Guix]], and the repository ships its whole
+toolchain in ~manifest.scm~.  The ~.envrc~ is a single line, so with
+[[https://direnv.net/][direnv]] installed entering the directory is all it takes to be in the right
+environment:
+
+#+begin_src sh
 direnv allow      # or: guix shell -m manifest.scm
 #+end_src
 
-That environment has Guile, GNU Artanis, ~guile-kracht~ (which builds every statement), ~guile-sqlite3~ (which binds its values), ~guile-curl~, ~guile-uuid~, ~guile-veritas~ (the test runner), ~mutastructura~ (the migrations), SQLite and ~maak~ -- everything the tasks below reach for.
+That environment has Guile, GNU Artanis, [[https://codeberg.org/jjba23/kracht][kracht]] (which builds every
+statement), ~guile-sqlite3~ (which binds its values), ~guile-curl~, ~guile-uuid~,
+[[https://codeberg.org/jjba23/veritas][veritas]] (the test runner), [[https://codeberg.org/jjba23/mutastructura][mutastructura]] (the migrations), SQLite
+and [[https://codeberg.org/jjba23/maak][maak]] -- everything the tasks below reach for.
 
-The libraries pingwing shares with its neighbours are pinned in ~manifest.scm~ at the versions [[https://codeberg.org/jjba23/byggsteg][byggsteg]] and lucidplan use -- ~guile-kracht~ 0.3.0 and ~guile-veritas~ 0.7.0 among them -- rather than taken from the channel, which lags behind what the projects actually run.  A fix made against one of the projects is then a fix made against all of them.
+The libraries pingwing shares with its neighbours are pinned in ~manifest.scm~
+at the versions [[https://codeberg.org/jjba23/byggsteg][byggsteg]] and
+[[https://codeberg.org/jjba23/lucidplan][lucidplan]] use -- ~guile-kracht~ and
+~guile-veritas~ among them -- rather than taken from the channel, which lags
+behind what the projects actually run.  A fix made against one of the projects
+is then a fix made against all of them.
 
-** Configuration: ~env.scm~
+*Not on Guix?*  Read ~manifest.scm~ as the list of exactly what you need, and
+install those packages with your own package manager.  The manifest is the
+honest answer to "what does this need", and it is what a non-Guix setup should
+be measured against.
 
-The only file a deployment must write is ~env.scm~ at the repository root, which ~ENTRY~ loads at startup.  It is deliberately not in version control (see ~.gitignore~).  For an SMTP account, that is the four settings AWS SES, Mailgun, Postmark, Gmail and every other provider hand you:
+** The tasks maak defines
+:PROPERTIES:
+:CUSTOM_ID: the-tasks-maak-defines
+:END:
+
+Every task lives in ~maak.scm~, and each runs inside the pinned environment
+above.  ~maak --list~ names them all; the ones you will reach for most:
+
+| Task                       | What it does                                                              |
+|----------------------------+---------------------------------------------------------------------------|
+| =maak init-db=             | Create ~pingwing.db~, turn on WAL, apply every migration (deletes the database first) |
+| =maak migrate=             | Apply the migrations a database is missing; safe to run at any time       |
+| =maak server=              | Run the server (and the queue worker) with ~conf/artanis.conf~            |
+| =maak production-server=   | The same, with ~conf/production.conf~                                     |
+| =maak dev= (=maak hr=)     | Restart the server when a =scm=, =css= or =js= file changes               |
+| =maak kill-server=         | Stop whatever is listening on the project's port                          |
+| =maak test=                | Run the unit suite under ~test/veritas/unit~                              |
+| =maak test-benchmark=      | Run the benchmarks under ~test/veritas/benchmark~                         |
+| =maak fmt=                 | Format every Scheme file the way the Guix style guide does                |
+| =maak build-manual=        | Render this document to ~README.html=                                     |
+| =maak repl=                | A Guile REPL in the project's environment, with its load paths            |
+| =maak import-production-env= | Copy the production ~env.scm= here over SSH (for looking at a live deployment) |
+
+------------------
+
+* Running pingwing yourself
+:PROPERTIES:
+:CUSTOM_ID: running-pingwing-yourself
+:END:
+
+From an empty machine to a deployment that sends mail through your own SMTP
+account and answers only the callers you gave a password to.
+
+** Configuring a deployment: ~env.scm~
+:PROPERTIES:
+:CUSTOM_ID: configuring-a-deployment-env-scm
+:END:
+
+The only file a deployment must write is ~env.scm~ at the repository root, which
+~ENTRY~ loads at startup.  It is deliberately not in version control (see
+~.gitignore~).  For an SMTP account, that is the four settings AWS SES,
+Mailgun, Postmark, Gmail and every other provider hand you:
 
 #+begin_src scheme
 (define pingwing-mail-access-key "AK******")
@@ -62,53 +289,97 @@ The only file a deployment must write is ~env.scm~ at the repository root, which
 (define pingwing-mail-access-port 587)
 #+end_src
 
-Everything else has a working default (see [[Settings]]), so those four are enough to start.  The worker's own knobs -- how many tasks run at once, how many times a delivery is retried -- are set in the ~pingwing-settings~ alist in ~ENTRY~ and documented below; a fresh checkout is already tuned reasonably.
+Everything else has a working default (see [[#settings][Settings]]), so those four are enough
+to start.  The worker's own knobs -- how many tasks run at once, how many times
+a delivery is retried -- are set in the ~pingwing-settings~ alist in ~ENTRY~ and
+documented below; a fresh checkout is already tuned reasonably.
 
 ** The database
+:PROPERTIES:
+:CUSTOM_ID: the-database
+:END:
 
-#+begin_src shell
+#+begin_src sh
 maak init-db        # first run: create the file and apply every migration
 maak migrate        # later runs: apply only the migrations not yet applied
 #+end_src
 
-~init-db~ deletes whatever database is there and builds an empty one, so it is the first command of a new deployment and never the upgrade path.  A deployment with data runs ~maak migrate~, which is safe to run again.
+~init-db~ deletes whatever database is there and builds an empty one, so it is
+the first command of a new deployment and never the upgrade path.  A deployment
+with data runs ~maak migrate~, which is safe to run again.
 
-Both hand the work to [[https://codeberg.org/jjba23/mutastructura][mutastructura]], which owns the migrations and the record of what has been applied:
+Both hand the work to [[https://codeberg.org/jjba23/mutastructura][mutastructura]], which owns the migrations and the record of
+what has been applied:
 
-- the migrations are the ~*.sql~ files under ~resources/migrations/sqlite/~, oldest first as their names sort -- ~YYYY-MM-DD_HH:MM:SS_what-it-does.sql~;
-- what has run is recorded by name *and checksum* in a ~migrations_history~ table, so a file edited after it was applied is reported rather than quietly re-run;
-- each migration is executed inside a transaction: one that fails leaves the database exactly as it was, rather than half-migrated.
+- the migrations are the ~*.sql~ files under ~resources/migrations/sqlite/~,
+  oldest first as their names sort -- ~YYYY-MM-DD_HH:MM:SS_what-it-does.sql~;
+- what has run is recorded by name *and checksum* in a ~migrations_history~
+  table, so a file edited after it was applied is reported rather than quietly
+  re-run;
+- each migration is executed inside a transaction: one that fails leaves the
+  database exactly as it was, rather than half-migrated.
 
-There is no runner of pingwing's own, deliberately: a second answer to "which migrations has this database seen?" is a second answer that can disagree with the first.  SQLite is left in WAL mode, which is what makes the concurrent reads and the worker's writes play nicely.
+There is no runner of pingwing's own, deliberately: a second answer to "which
+migrations has this database seen?" is a second answer that can disagree with
+the first.  SQLite is left in WAL mode, which is what makes the concurrent reads
+and the worker's writes play nicely.
 
 ** Starting the server
+:PROPERTIES:
+:CUSTOM_ID: starting-the-server
+:END:
 
-#+begin_src shell
+#+begin_src sh
 maak server                 # development configuration (conf/artanis.conf)
 maak production-server      # production configuration (conf/production.conf)
 #+end_src
 
-Both run ~art work~ inside the Guix manifest, and both first free port 50077 if an old instance is still holding it.  In production pingwing is meant to sit behind a reverse proxy that terminates TLS -- the host name and port live in ~conf/production.conf~.
+Both run ~art work~ inside the Guix manifest, and both first free port 50077 if
+an old instance is still holding it.  In production pingwing is meant to sit
+behind a reverse proxy that terminates TLS -- the host name and port live in
+~conf/production.conf~.
+
+The queue worker is not a second process to start: ~ENTRY~ starts it before the
+application takes its first request, and cancels it on ~SIGINT~.
 
 ** Seeing a task end to end
+:PROPERTIES:
+:CUSTOM_ID: seeing-a-task-end-to-end
+:END:
 
-#+begin_src shell
+#+begin_src sh
 curl -s http://localhost:50077/api/v1/health
 # {"status":"ok","service":"pingwing"}
 #+end_src
 
-----------------------------
+With an SMTP account configured, [[#the-api][The API]] below has a complete request to post,
+and [[#details-on-how-tasks-are-sent-via-e-mail][Details on how tasks are sent via e-mail]] shows what comes out the other
+side.
 
-* Authentication: basic auth at the proxy, and nothing else
+** Authentication: basic auth at the proxy, and nothing else
+:PROPERTIES:
+:CUSTOM_ID: authentication-basic-auth-at-the-proxy
+:END:
 
-pingwing has no users table, no sessions and no login.  It is an *internal service*: the only things that ever call it are your own programs -- [[https://codeberg.org/jjba23/lucidplan][lucidplan]], [[https://codeberg.org/jjba23/byggsteg][byggsteg]], a cron job, a script -- sitting on the same private network or talking to it through a proxy you control.  The callers are machines, so the credential is a machine credential: HTTP Basic authentication, checked by the reverse proxy in front of Artanis.
+pingwing has no users table, no sessions and no login.  It is an *internal
+service*: the only things that ever call it are your own programs --
+[[https://codeberg.org/jjba23/lucidplan][lucidplan]], [[https://codeberg.org/jjba23/byggsteg][byggsteg]], a
+cron job, a script -- sitting on the same private network or talking to it
+through a proxy you control.  The callers are machines, so the credential is a
+machine credential: HTTP Basic authentication, checked by the reverse proxy in
+front of Artanis.
 
 That is the whole model:
 
-- The reverse proxy (nginx, Caddy, Apache) asks for a username and password on every request to ~/api/~.
-- A caller sends them with ~curl -u user:password~ (or whatever its HTTP client offers).
-- The proxy either forwards the request or answers ~401 Unauthorized~.  Artanis never sees an unauthenticated request.
-- There is no user model to build, no password to store, no session cookie to leak, and no sign-up flow to secure -- because there is no account anybody logs into.
+- The reverse proxy (nginx, Caddy, Apache) asks for a username and password on
+  every request to ~/api/~.
+- A caller sends them with ~curl -u user:password~ (or whatever its HTTP client
+  offers).
+- The proxy either forwards the request or answers ~401 Unauthorized~.  Artanis
+  never sees an unauthenticated request.
+- There is no user model to build, no password to store, no session cookie to
+  leak, and no sign-up flow to secure -- because there is no account anybody
+  logs into.
 
 A minimal nginx site looks like this:
 
@@ -132,13 +403,13 @@ server {
 
 The password file is made once, with the well-known ~htpasswd~:
 
-#+begin_src shell
+#+begin_src sh
 printf 'joe:%s\n' "$(openssl passwd -apr1)" >> /etc/nginx/pingwing.htpasswd
 #+end_src
 
 A caller then looks like:
 
-#+begin_src shell
+#+begin_src sh
 curl -u joe:secret \
      -H 'Content-Type: application/json' \
      -d @task.json \
@@ -146,18 +417,72 @@ curl -u joe:secret \
 #+end_src
 
 *** Why not auth in the application?
+:PROPERTIES:
+:CUSTOM_ID: why-not-auth-in-the-application
+:END:
 
-Because the application has nothing to protect it with.  A user table would mean storing a password hash, a session, a reset flow -- a whole account system, with all of its failure modes -- to guard an endpoint whose callers are three programs that already hold a shared secret.  The secret lives in the proxy's own credential file and in the callers' environment (see ~pingwing-basic-auth-user~ / ~pingwing-basic-auth-password~ in byggsteg's and lucidplan's ~env.scm~), never in a database and never in a browser.  If you later put pingwing on the public internet, the same basic-auth layer, over TLS, is still the smallest thing that works.
+Because the application has nothing to protect it with.  A user table would mean
+storing a password hash, a session, a reset flow -- a whole account system, with
+all of its failure modes -- to guard an endpoint whose callers are three programs
+that already hold a shared secret.  The secret lives in the proxy's own
+credential file and in the callers' environment (see
+~pingwing-basic-auth-user~ / ~pingwing-basic-auth-password~ in byggsteg's and
+lucidplan's ~env.scm~), never in a database and never in a browser.  If you later
+put pingwing on the public internet, the same basic-auth layer, over TLS, is
+still the smallest thing that works.
 
-----------------------------
+** Running it as a service
+:PROPERTIES:
+:CUSTOM_ID: running-it-as-a-service
+:END:
+
+pingwing is a long-running process; the queue worker starts with the server and
+is cancelled on ~SIGINT~.  A ~systemd~ unit (or a Guix [[https://www.gnu.org/software/shepherd/][Shepherd]] service) that runs
+~maak production-server~ in the checkout, with ~WorkingDirectory~ set to it, is
+all that is needed.  Reserve enough of a shutdown grace period for the worker to
+finish a sweep; on restart, anything it did not finish is requeued by the
+stale-task sweep.
+
+** Logs
+:PROPERTIES:
+:CUSTOM_ID: logs
+:END:
+
+The worker reports to stdout: each failed delivery with its reason, each
+requeue, each task given up on, and each batch it runs.  Point the service's
+stdout at wherever your system keeps logs.  The same reasons are in the
+~last-error~ column, readable with ~GET /api/v1/tasks~ or ~sqlite3~.
+
+** The database (backups)
+:PROPERTIES:
+:CUSTOM_ID: backups
+:END:
+
+SQLite in WAL mode: back up by copying ~pingwing.db~ (plus the ~-wal~ and ~-shm~
+files) while the service is stopped, or use ~sqlite3 pingwing.db ".backup
+backup.db"~ while it runs.  The migrations that build and extend the schema are
+under ~resources/migrations/sqlite/~ and are applied by ~maak migrate~, which is
+mutastructura; the ~migrations_history~ table is the record of what a deployment
+has run, and the fastest way to see where a database stands.
+
+------------------
 
 * The API
+:PROPERTIES:
+:CUSTOM_ID: the-api
+:END:
 
-All routes live under ~/api/v1~ and all of them are behind the basic-auth layer above.  The API answers JSON, and a request that is wrong is refused with a ~400~ and a sentence saying which field is wrong -- never quietly accepted and discovered later as a mail that never came.
+All routes live under ~/api/v1~ and all of them are behind the basic-auth layer
+above.  The API answers JSON, and a request that is wrong is refused with a
+~400~ and a sentence saying which field is wrong -- never quietly accepted and
+discovered later as a mail that never came.
 
 ** ~POST /api/v1/tasks~ -- submit a task
+:PROPERTIES:
+:CUSTOM_ID: post-api-v1-tasks
+:END:
 
-#+begin_src shell
+#+begin_src sh
 curl -u joe:secret \
      -H "Content-Type: application/json" \
      -d '{
@@ -172,8 +497,8 @@ curl -u joe:secret \
            "ticket-type": "bug",
            "ticket-status": "open",
            "priority": 2,
-           "author": "joe",
-           "assignee": "nina",
+           "author": "John Doe",
+           "assignee": "Nina",
            "description": "A flaky connection makes a mail go missing.",
            "ticket-url": "https://lucidplan.jointhefreeworld.org/pingwing/tickets/12"
          },
@@ -181,7 +506,7 @@ curl -u joe:secret \
          "sender-address": "noreply@mail.jointhefreeworld.org",
          "subject": "Lucidplan - New ticket",
          "recipients": [
-           {"name": "Josep Bigorra", "address": "jjbigorra@gmail.com"},
+           {"name": "John Doe", "address": "john.doe@example.org"},
            {"name": "Nina", "address": "nina@example.org"}
          ]
        }' \
@@ -192,199 +517,402 @@ curl -u joe:secret \
 #  "id":"a3c60cb2-0859-4cd3-8357-84ec664d1ed1"}
 #+end_src
 
-The answer is ~201~ with the new task's id.  The id is also what appears in the subject of the mail, so a task and the message it produced can be lined up.
+The answer is ~201~ with the new task's id.  The id is also what appears in the
+subject of the mail, so a task and the message it produced can be lined up.
 
 The fields are:
 
-- ~task-type~ -- an enum; only ~send-email~ is implemented.  Anything else is refused with the reason.
-- ~template~ -- which message to build.  One of ~password-reset~, ~system-alert~, ~lucidplan-new-ticket~.  See [[Templates]].
-- ~template-vars~ -- a JSON object of the values the template is filled with; which keys each template reads is in [[Templates]].  A key a template does not know is ignored, and a key a template wants but did not get is simply left out, so a template never renders as broken.
-- ~sender-name~ -- the display name on the ~From~ header.  Optional: without it the address stands alone.
-- ~sender-address~ -- the ~From~ address (and the SMTP envelope sender).  Required.
-- ~subject~ -- the subject.  Required.  The task's id is appended to it automatically, which is what makes two otherwise identical mails distinguishable in a mailbox.
-- ~recipients~ -- a non-empty list of ~{"name", "address"}~ objects.  Each recipient is delivered to *separately*: the mail server sees one message per address, and no recipient can read the others' addresses off the ~To~ header.
+- ~task-type~ -- an enum; only ~send-email~ is implemented.  Anything else is
+  refused with the reason.
+- ~template~ -- which message to build.  One of ~password-reset~,
+  ~system-alert~, ~lucidplan-new-ticket~.  See [[#templates][Templates]].
+- ~template-vars~ -- a JSON object of the values the template is filled with;
+  which keys each template reads is in [[#templates][Templates]].  A key a template does not
+  know is ignored, and a key a template wants but did not get is simply left
+  out, so a template never renders as broken.
+- ~sender-name~ -- the display name on the ~From~ header.  Optional: without it
+  the address stands alone.
+- ~sender-address~ -- the ~From~ address (and the SMTP envelope sender).
+  Required.
+- ~subject~ -- the subject.  Required.  The task's id is appended to it
+  automatically, which is what makes two otherwise identical mails
+  distinguishable in a mailbox.
+- ~recipients~ -- a non-empty list of ~{"name", "address"}~ objects.  Each
+  recipient is delivered to *separately*: the mail server sees one message per
+  address, and no recipient can read the others' addresses off the ~To~ header.
 
 ** ~GET /api/v1/tasks~ -- look at the queue
+:PROPERTIES:
+:CUSTOM_ID: get-api-v1-tasks
+:END:
 
-Returns the latest tasks, newest first, with the fields an operator needs and nothing else:
+Returns the latest tasks, newest first, with the fields an operator needs and
+nothing else:
 
-#+begin_src shell
+#+begin_src sh
 curl -u joe:secret 'http://localhost:50077/api/v1/tasks?limit=20'
 #+end_src
 
-The template variables and the recipients are deliberately *not* in the answer: a password-reset link is a secret, and listing it would put one on the wire for no reason.  What you get is the id, status, type, template, sender, subject, ~attempts~, ~last-error~ and the two timestamps.
+The template variables and the recipients are deliberately *not* in the answer:
+a password-reset link is a secret, and listing it would put one on the wire for
+no reason.  What you get is the id, status, type, template, sender, subject,
+~attempts~, ~last-error~ and the two timestamps.
 
 ** ~GET /api/v1/health~ -- liveness
+:PROPERTIES:
+:CUSTOM_ID: get-api-v1-health
+:END:
 
 #+begin_src json
 {"status":"ok","service":"pingwing"}
 #+end_src
 
-Needs no credentials and touches no database: it answers exactly the question a proxy or an uptime check is asking -- is the application up and routing.
+Needs no credentials and touches no database: it answers exactly the question a
+proxy or an uptime check is asking -- is the application up and routing.
 
-----------------------------
+------------------
 
 * What is a task?
+:PROPERTIES:
+:CUSTOM_ID: what-is-a-task
+:END:
 
-A task is one row of the ~tasks~ table and one object on the wire.  Its life is a small state machine:
+A task is one row of the ~tasks~ table and one object on the wire.  Its life is
+a small state machine:
 
 - ~pending~ -- waiting for a sweep.
 - ~processing~ -- claimed by a sweep and being delivered right now.
 - ~complete~ -- every recipient's message was accepted by the SMTP server.
-- ~failed~ -- it used up its retries (or named a template that does not exist) and was given up on, with ~last_error~ saying why.
+- ~failed~ -- it used up its retries (or named a template that does not exist)
+  and was given up on, with ~last_error~ saying why.
 
-~attempts~ counts how many sweeps have had a go at it, and ~last_error~ carries the last reason a delivery did not work -- the SMTP server's own words where there were any, so a look at the table is usually enough to know what is wrong.
+~attempts~ counts how many sweeps have had a go at it, and ~last_error~ carries
+the last reason a delivery did not work -- the SMTP server's own words where
+there were any, so a look at the table is usually enough to know what is wrong.
+
+There is no HTTP route that reads or changes a single task: the queue is
+inspected through ~GET /api/v1/tasks~ and ~sqlite3~, and everything else about it
+is the worker's business.
 
 *** TODO: user-specified template in HTTP request (send Scheme code over the wire) (unimplemented)
 *** TODO: ~send-slack~ as a task-type (unimplemented)
 
-----------------------------
+------------------
 
 * Templates
+:PROPERTIES:
+:CUSTOM_ID: templates
+:END:
 
-A template is a Scheme module under ~lib/pingwing/templates/~ that turns a task's variables into the two parts of a message: a plain-text body and an HTML one.  Adding one is three steps:
+A template is a Scheme module under ~lib/pingwing/templates/~ that turns a task's
+variables into the two parts of a message: a plain-text body and an HTML one.
+Adding one is three steps:
 
-1. write ~lib/pingwing/templates/<name>.scm~ exporting a ~<name>-html-template~ and a ~<name>-plain-template~, each a ~define*~ taking ~#:key~ arguments;
-2. add the name to the dispatch in ~lib/pingwing/tasks.scm~ (~body-from-task~ and ~html-body-from-task~) and to ~known-templates~ in ~app/api/v1.scm~ so the API accepts it;
+1. write ~lib/pingwing/templates/<name>.scm~ exporting a ~<name>-html-template~
+   and a ~<name>-plain-template~, each a ~define*~ taking ~#:key~ arguments;
+2. add the name to the dispatch in ~lib/pingwing/tasks.scm~ (~body-from-task~ and
+   ~html-body-from-task~) and to ~known-templates~ in ~app/api/v1.scm~ so the API
+   accepts it;
 3. post a task naming it.
 
 ** The three that ship
+:PROPERTIES:
+:CUSTOM_ID: the-three-that-ship
+:END:
 
 *** ~password-reset~
+:PROPERTIES:
+:CUSTOM_ID: template-password-reset
+:END:
 
-Tells a user their account's password can be reset.  Variables: ~system-name~, ~user~, ~reset-link~.
+Tells a user their account's password can be reset.  Variables: ~system-name~,
+~user~, ~reset-link~.
 
 *** ~system-alert~
+:PROPERTIES:
+:CUSTOM_ID: template-system-alert
+:END:
 
 Tells someone an alert fired.  Variables: ~system-name~, ~alert-value~.
 
 *** ~lucidplan-new-ticket~
+:PROPERTIES:
+:CUSTOM_ID: template-lucidplan-new-ticket
+:END:
 
-Tells the people of a [[https://codeberg.org/jjba23/lucidplan][lucidplan]] project that a ticket has been created in it -- sent to the reporter, the assignee or a watcher, whoever the project decides should hear about it.  Variables: ~system-name~ (the board's name, used in the button), ~project-name~ or ~project-human-id~, ~ticket-human-id~, ~ticket-title~, ~ticket-type~, ~ticket-status~, ~priority~, ~author~, ~assignee~, ~description~, ~ticket-url~.  Everything past the project is optional, and a missing one is left out rather than shown blank.
+Tells the people of a [[https://codeberg.org/jjba23/lucidplan][lucidplan]] project that a ticket has been created in it --
+sent to the reporter, the assignee or a watcher, whoever the project decides
+should hear about it.  Variables: ~system-name~ (the board's name, used in the
+button), ~project-name~ or ~project-human-id~, ~ticket-human-id~,
+~ticket-title~, ~ticket-type~, ~ticket-status~, ~priority~, ~author~,
+~assignee~, ~description~, ~ticket-url~.  Everything past the project is
+optional, and a missing one is left out rather than shown blank.
 
-To send one from lucidplan, post exactly the payload in [[The API]] above: the template renders the title, the ticket number (as ~#12~), the project, and the ticket's own link, and says plainly that reading it asks no action.
+To send one from lucidplan, post exactly the payload in [[#post-api-v1-tasks][~POST /api/v1/tasks~]]: the
+template renders the title, the ticket number (as ~#12~), the project, and the
+ticket's own link, and says plainly that reading it asks no action.
 
 ** How a message is built, and why it looks the way it does
+:PROPERTIES:
+:CUSTOM_ID: how-a-message-is-built
+:END:
 
-A mail client is not a browser.  It is free to throw away the whole ~<head>~ of a document -- no stylesheet, no web font, no media query -- and every client throws away a different part of it.  So pingwing follows the one rule that survives that: *every colour, size and shape a message cannot do without is written inline, on the element that wears it.*  The ~<head>~ carries only the two things that genuinely cannot be said inline -- the ~@font-face~ declarations and a dark-mode override -- as a courtesy for the clients that read them.  A message that loses the whole ~<head>~ still reads as the same message; it just falls back to Lucida or the system sans and to the light palette, which the rest of the declarations are already chosen to match.
+A mail client is not a browser.  It is free to throw away the whole ~<head>~ of
+a document -- no stylesheet, no web font, no media query -- and every client
+throws away a different part of it.  So pingwing follows the one rule that
+survives that: *every colour, size and shape a message cannot do without is
+written inline, on the element that wears it.*  The ~<head>~ carries only the two
+things that genuinely cannot be said inline -- the ~@font-face~ declarations and
+a dark-mode override -- as a courtesy for the clients that read them.  A message
+that loses the whole ~<head>~ still reads as the same message; it just falls
+back to Lucida or the system sans and to the light palette, which the rest of
+the declarations are already chosen to match.
 
-The look is the hygguile one, as much of it as a mail can hold: a translucent panel over a soft gradient, a hairline border, a long low shadow, and a hairline of everforest colour along the top where the web surfaces let their washes drift.  Real frosted glass is a ~backdrop-filter~, which no mail client will paint, so the glass is faked the way it has always been faked where blur is unavailable: transparency plus a shadow.  ~backdrop-filter~ is still declared, for the clients that would honour it.
+The look is the hygguile one, as much of it as a mail can hold: a translucent
+panel over a soft gradient, a hairline border, a long low shadow, and a hairline
+of everforest colour along the top where the web surfaces let their washes
+drift.  Real frosted glass is a ~backdrop-filter~, which no mail client will
+paint, so the glass is faked the way it has always been faked where blur is
+unavailable: transparency plus a shadow.  ~backdrop-filter~ is still declared,
+for the clients that would honour it.
 
-Typography is Lucida Sans (with Lucida Sans Typewriter for the monospaced bits) over the framework's own ~@font-face~ sources, and Intel One Mono from Google Fonts, with system fallbacks chosen to sit on the same footing.  The colours are the everforest palette, so a pingwing message reads as a member of the same family as the sites that send it.  All of the shared furniture -- the panel, the button, the fact list, the footer, the two text styles -- lives in ~lib/pingwing/html.scm~ and ~lib/pingwing/css.scm~, so every template agrees by construction.
+Typography is Lucida Sans (with Lucida Sans Typewriter for the monospaced bits)
+over the framework's own ~@font-face~ sources, and Intel One Mono from Google
+Fonts, with system fallbacks chosen to sit on the same footing.  The colours are
+the everforest palette, so a pingwing message reads as a member of the same
+family as the sites that send it.  All of the shared furniture -- the panel, the
+button, the fact list, the footer, the two text styles -- lives in
+~lib/pingwing/html.scm~ and ~lib/pingwing/css.scm~, so every template agrees by
+construction.
 
-----------------------------
+One rule of that module is worth knowing before you touch it: an element with no
+children at all is written by ~sxml->xml~ as a self-closing tag, ~<div ... />~,
+which is XML rather than HTML -- an HTML parser reads it as an *opening* tag and
+makes everything after it its children.  The elements that may end up holding
+nothing therefore pass their children through ~as-children~, which is what keeps
+the closing tag in the output, and ~test/veritas/unit/templates-spec.scm~ asserts
+it over every template.
+
+** The demo picture, and how to redraw it
+:PROPERTIES:
+:CUSTOM_ID: the-demo-picture-and-how-to-redraw-it
+:END:
+
+The GIF at the top of this manual is not a screenshot somebody took by hand.  It
+is built from the templates themselves:
+
+#+begin_src sh
+guix shell -m manifest.scm -- ./docs/make-demo-gif.sh
+#+end_src
+
+The script renders three messages through the same modules a delivery calls
+(~docs/render-demo.scm~), photographs each one in a headless browser -- once in
+the light palette, and the ticket notice again in the dark one -- and stitches
+them into ~docs/pingwing-demo.gif~.  Change a template and the picture changes
+with it; it needs a Chromium-family browser and ImageMagick, and it touches no
+network.
+
+------------------
 
 * Reliability: what happens when a mail does not go out
+:PROPERTIES:
+:CUSTOM_ID: reliability
+:END:
 
-Mail is a network service, and a network is allowed to be down for a moment.  pingwing treats that as the normal case, and everything below is about not losing a message to it.
+Mail is a network service, and a network is allowed to be down for a moment.
+pingwing treats that as the normal case, and everything below is about not
+losing a message to it.
 
 ** Retries, on two clocks
+:PROPERTIES:
+:CUSTOM_ID: retries-on-two-clocks
+:END:
 
-- *Within one delivery* (~mail~ settings ~attempts~ and ~retry-delay-seconds~): the message is handed to the SMTP server up to ~attempts~ times, waiting ~retry-delay-seconds~ before the second try, twice that before the third, and so on.  A connection that blinks or a server that is restarting is over within the wait.  Each wait doubles, so the default 3-second base puts three tries inside about nine seconds.
-- *Across sweeps* (~pingwing~ setting ~max-task-attempts~): a task that still failed is left ~pending~ for a later sweep, up to ~max-task-attempts~ sweeps in all, before it becomes ~failed~.  A mail server that is down for a minute is waited out rather than lost.
+- *Within one delivery* (~mail~ settings ~attempts~ and ~retry-delay-seconds~):
+  the message is handed to the SMTP server up to ~attempts~ times, waiting
+  ~retry-delay-seconds~ before the second try, twice that before the third, and
+  so on.  A connection that blinks or a server that is restarting is over within
+  the wait.  Each wait doubles, so the default 3-second base puts three tries
+  inside about nine seconds.
+- *Across sweeps* (~pingwing~ setting ~max-task-attempts~): a task that still
+  failed is left ~pending~ for a later sweep, up to ~max-task-attempts~ sweeps
+  in all, before it becomes ~failed~.  A mail server that is down for a minute is
+  waited out rather than lost.
 
-Every delivery attempt is made against the *same bytes*: the message -- boundary, date, Message-ID and all -- is built once per recipient and re-sent unchanged on a retry.
+Every delivery attempt is made against the *same bytes*: the message -- boundary,
+date, Message-ID and all -- is built once per recipient and re-sent unchanged on
+a retry.
 
 ** What "sent" means
+:PROPERTIES:
+:CUSTOM_ID: what-sent-means
+:END:
 
-A mail is called sent only when the SMTP server said it took it.  A request that never left is not a success, and neither is an answer that is not ~2xx~: libcurl's own error code is read, and what the server actually replied is kept.  When every try fails, the reason the caller, the operator and the ~last_error~ column all get is the server's own words -- for example ~could not deliver to <joe@example.org> after 3 attempts: libcurl 7: Failed to connect to 127.0.0.1 port 2525~.
+A mail is called sent only when the SMTP server said it took it.  A request that
+never left is not a success, and neither is an answer that is not ~2xx~:
+libcurl's own error code is read, and what the server actually replied is kept.
+When every try fails, the reason the caller, the operator and the ~last_error~
+column all get is the server's own words -- for example ~could not deliver to
+<john.doe@example.org> after 3 attempts: libcurl 7: Failed to connect to
+127.0.0.1 port 2525~.
 
 ** The message itself
+:PROPERTIES:
+:CUSTOM_ID: the-message-itself
+:END:
 
-A message that arrives mangled is as lost as one that never left, so the bytes are built to survive the wire:
+A message that arrives mangled is as lost as one that never left, so the bytes
+are built to survive the wire:
 
-- Headers that hold anything outside US-ASCII are encoded as RFC 2047 encoded-words; the ~Date~ is an RFC 5322 date built for the English wire format regardless of the host's locale; a ~Message-ID~ is generated; a fresh boundary is generated per message.
-- Bodies are quoted-printable encoded *over the UTF-8 bytes*, so an accent or an emoji survives being relayed; long lines are soft-wrapped at 75 columns; a leading dot is escaped so no body line can be mistaken for SMTP's end-of-data marker; lines end CRLF.
-- Every header value is stripped of line breaks before it is written, so a crafted subject cannot inject a header of its own.
+- Headers that hold anything outside US-ASCII are encoded as RFC 2047
+  encoded-words; the ~Date~ is an RFC 5322 date built for the English wire
+  format regardless of the host's locale; a ~Message-ID~ is generated; a fresh
+  boundary is generated per message.
+- Bodies are quoted-printable encoded *over the UTF-8 bytes*, so an accent or an
+  emoji survives being relayed; long lines are soft-wrapped at 75 columns; a
+  leading dot is escaped so no body line can be mistaken for SMTP's end-of-data
+  marker; lines end CRLF.
+- Every header value is stripped of line breaks before it is written, so a
+  crafted subject cannot inject a header of its own.
 
 ** A worker that stops
+:PROPERTIES:
+:CUSTOM_ID: a-worker-that-stops
+:END:
 
-If the process stops mid-delivery, the task it was running is left ~processing~ with nothing running it.  On its next sweep the worker puts any task that has sat ~processing~ for longer than ~stale-processing-seconds~ (default 10 minutes) back into ~pending~.  A restart therefore loses no message.
+If the process stops mid-delivery, the task it was running is left ~processing~
+with nothing running it.  On its next sweep the worker puts any task that has sat
+~processing~ for longer than ~stale-processing-seconds~ (default 10 minutes) back
+into ~pending~.  A restart therefore loses no message.
 
-----------------------------
+------------------
 
 * The queue, and the fibers it runs on
+:PROPERTIES:
+:CUSTOM_ID: the-queue-and-the-fibers-it-runs-on
+:END:
 
-Ingestion and delivery meet in one place and nowhere else: a row of the ~tasks~ table.  The API only writes rows; the worker only reads them.  Everything the worker does is a *sweep*:
+Ingestion and delivery meet in one place and nowhere else: a row of the ~tasks~
+table.  The API only writes rows; the worker only reads them.  Everything the
+worker does is a *sweep*:
 
 1. requeue anything a stopped worker left behind (see above);
 2. take up to ~worker-batch-limit~ pending tasks, oldest first;
-3. claim each -- a claim moves it from ~pending~ to ~processing~, so a task is never picked up twice;
-4. run the batch *concurrently*, at most ~worker-concurrency~ at a time, on a ~run-fibers~ scheduler the sweep makes and drains;
+3. claim each -- a claim moves it from ~pending~ to ~processing~, so a task is
+   never picked up twice;
+4. run the batch *concurrently*, at most ~worker-concurrency~ at a time, on a
+   ~run-fibers~ scheduler the sweep makes and drains;
 5. rest ~worker-sleep-seconds~, then go again.
 
-This is the same shape [[https://codeberg.org/jjba23/byggsteg][byggsteg]]'s queue uses: a task per fiber, a shared queue the workers take from as they free up, and a fibers condition the sweep waits on until the last worker stops.
+This is the same shape [[https://codeberg.org/jjba23/byggsteg][byggsteg]]'s queue uses: a task per fiber, a shared queue
+the workers take from as they free up, and a fibers condition the sweep waits on
+until the last worker stops.
 
-There is one wrinkle worth naming.  A send is libcurl's to make, and libcurl's easy interface *blocks the thread it runs on*.  A fiber that called it directly would freeze the whole sweep behind one slow message, and the concurrency would be a lie.  So the blocking call is handed to a thread of its own, and the fiber waits on a condition that thread signals -- fibers for the orchestration and the back-pressure, a bounded handful of threads for the work that genuinely blocks.  The batch size and the concurrency are both settings, so a deployment tunes the pressure it puts on its mail server.
+There is one wrinkle worth naming.  A send is libcurl's to make, and libcurl's
+easy interface *blocks the thread it runs on*.  A fiber that called it directly
+would freeze the whole sweep behind one slow message, and the concurrency would
+be a lie.  So the blocking call is handed to a thread of its own, and the fiber
+waits on a condition that thread signals -- fibers for the orchestration and the
+back-pressure, a bounded handful of threads for the work that genuinely blocks.
+The batch size and the concurrency are both settings, so a deployment tunes the
+pressure it puts on its mail server.
 
-The database is the one thing the fibers and the request handlers share, and it is shared carefully: one connection per file, and every statement taken and run under a mutex.  That is not a matter of taste -- guile-sqlite3 caches prepared statements per connection in a plain hash table, so two threads preparing statements at once can be handed each other's -- and it costs nothing here, since a statement is short and the long work (an SMTP conversation) happens outside the lock.
+The database is the one thing the fibers and the request handlers share, and it
+is shared carefully: one connection per file, and every statement taken and run
+under a mutex.  That is not a matter of taste -- guile-sqlite3 caches prepared
+statements per connection in a plain hash table, so two threads preparing
+statements at once can be handed each other's -- and it costs nothing here, since
+a statement is short and the long work (an SMTP conversation) happens outside
+the lock.
 
-----------------------------
+------------------
 
 * The database layer: kracht, and values that are values
+:PROPERTIES:
+:CUSTOM_ID: the-database-layer
+:END:
 
-Every statement pingwing sends arrives here built by [[https://codeberg.org/jjba23/kracht][kracht]]'s SQL module: a SQL string with ~?~ placeholders, plus the list of values to bind in their order.  The two travel separately all the way to SQLite, and it is SQLite that binds them -- so a subject with an apostrophe in it, an error message a mail server wrote, a value that spells out ~'; DROP TABLE tasks; --~: each is a value, and none of them can change the shape of the statement it travels in.
+Every statement pingwing sends arrives here built by
+[[https://codeberg.org/jjba23/kracht][kracht]]'s SQL module: a SQL string with ~?~ placeholders, plus the list of values
+to bind in their order.  The two travel separately all the way to SQLite, and it
+is SQLite that binds them -- so a subject with an apostrophe in it, an error
+message a mail server wrote, a value that spells out ~'; DROP TABLE tasks; --~:
+each is a value, and none of them can change the shape of the statement it
+travels in.
 
-That is the whole reason for the layer, and it is worth saying what it replaces.  Artanis' own ~DB-query~ hands one finished string to guile-dbi, which has no binding step at all; every value would have to be quoted and escaped into the text first, and the escaping would have to be right about every column, forever.  So pingwing talks to its SQLite file through ~guile-sqlite3~ -- the binding Artanis itself is configured to name -- and ~(pingwing sqlite util)~ owns the connection, the lock and the binding.
+That is the whole reason for the layer, and it is worth saying what it replaces.
+Artanis' own ~DB-query~ hands one finished string to guile-dbi, which has no
+binding step at all; every value would have to be quoted and escaped into the
+text first, and the escaping would have to be right about every column, forever.
+So pingwing talks to its SQLite file through ~guile-sqlite3~ -- the binding
+Artanis itself is configured to name -- and ~(pingwing sqlite util)~ owns the
+connection, the lock and the binding.
 
 Two consequences a contributor will meet straight away:
 
-- nothing is escaped on the way in or out, and nothing should be.  ~(pingwing query-escape)~ and the ~escape-str~/~unescape-str~ pair it offered are gone, along with the ~&apos;~ that old rows carried; the migration ~2026-10-14_13:00:00_unescape_task_text.sql~ takes that off the rows written before this change;
-- a status travels as the symbol the source spells it with (~(task-status . complete)~) and reaches the column as the text ~complete~: the layer maps booleans to 1 and 0 and symbols to their names, which is the one place Scheme values and SQLite values have to be introduced to one another.
+- nothing is escaped on the way in or out, and nothing should be.  The
+  ~query-escape~ helper and the ~escape-str~/~unescape-str~ pair it offered are
+  gone, along with the ~&apos;~ that old rows carried; the migration
+  ~2026-10-14_13:00:00_unescape_task_text.sql~ takes that off the rows written
+  before this change;
+- a status travels as the symbol the source spells it with (~(task-status
+  . complete)~) and reaches the column as the text ~complete~: the layer maps
+  booleans to 1 and 0 and symbols to their names, which is the one place Scheme
+  values and SQLite values have to be introduced to one another.
 
-A reading that is not a plain condition list -- the stale-task sweep's ~updated_at IS NULL OR updated_at < ?~ -- is written with ~sql-parameterize~, the escape hatch meant for exactly that: the values are still bound, only the text is written by hand.
+A reading that is not a plain condition list -- the stale-task sweep's
+~updated_at IS NULL OR updated_at < ?~ -- is written with ~sql-parameterize~, the
+escape hatch meant for exactly that: the values are still bound, only the text is
+written by hand.
 
-----------------------------
+------------------
 
 * Settings
+:PROPERTIES:
+:CUSTOM_ID: settings
+:END:
 
-~ENTRY~ holds one alist, ~pingwing-settings~, with two groups.  Every key has a default in the code, so a setting that is not written is not missing.
+~ENTRY~ holds one alist, ~pingwing-settings~, with two groups.  Every key has a
+default in the code, so a setting that is not written is not missing.
 
 ** ~mail~
+:PROPERTIES:
+:CUSTOM_ID: settings-mail
+:END:
 
-| key                   | default                                | meaning                                                            |
-|-----------------------+----------------------------------------+--------------------------------------------------------------------|
-| ~access-key~          | from ~env.scm~                         | SMTP username                                                      |
-| ~access-secret~       | from ~env.scm~                         | SMTP password                                                      |
-| ~access-server~       | from ~env.scm~                         | SMTP host                                                          |
-| ~access-port~         | from ~env.scm~                         | SMTP port (587 is the usual submission port)                       |
-| ~attempts~            | ~3~                                    | times one delivery is tried before it is called a failure          |
-| ~retry-delay-seconds~ | ~3~                                    | wait before the second try; each later wait doubles                |
-| ~use-ssl~             | ~1~                                    | ask libcurl to upgrade with STARTTLS when the server offers it     |
-| ~tmp-dir~             | ~"tmp"~                                | where a message is written before it is handed to libcurl         |
-| ~verbose~             | ~#f~                                   | let libcurl print the SMTP conversation to stderr                  |
+| key                   | default          | meaning                                                       |
+|-----------------------+------------------+---------------------------------------------------------------|
+| ~access-key~          | from ~env.scm~   | SMTP username                                                 |
+| ~access-secret~       | from ~env.scm~   | SMTP password                                                 |
+| ~access-server~       | from ~env.scm~   | SMTP host                                                     |
+| ~access-port~         | from ~env.scm~   | SMTP port (587 is the usual submission port)                  |
+| ~attempts~            | ~3~              | times one delivery is tried before it is called a failure     |
+| ~retry-delay-seconds~ | ~3~              | wait before the second try; each later wait doubles           |
+| ~use-ssl~             | ~1~              | ask libcurl to upgrade with STARTTLS when the server offers it |
+| ~tmp-dir~             | ~"tmp"~          | where a message is written before it is handed to libcurl     |
+| ~verbose~             | ~#f~             | let libcurl print the SMTP conversation to stderr             |
 
 ** ~pingwing~
+:PROPERTIES:
+:CUSTOM_ID: settings-pingwing
+:END:
 
-| key                        | default | meaning                                                    |
-|----------------------------+---------+------------------------------------------------------------|
-| ~worker-sleep-seconds~     | ~5~     | rest between sweeps                                        |
-| ~worker-batch-limit~       | ~16~    | most pending tasks one sweep takes                         |
-| ~worker-concurrency~       | ~4~     | most of them delivered at once                             |
-| ~max-task-attempts~        | ~5~     | sweeps a task may fail before it is given up on            |
-| ~stale-processing-seconds~ | ~600~   | age at which a stuck ~processing~ task goes back to pending|
+| key                        | default | meaning                                                       |
+|----------------------------+---------+---------------------------------------------------------------|
+| ~worker-sleep-seconds~     | ~5~     | rest between sweeps                                           |
+| ~worker-batch-limit~       | ~16~    | most pending tasks one sweep takes                            |
+| ~worker-concurrency~       | ~4~     | most of them delivered at once                                |
+| ~max-task-attempts~        | ~5~     | sweeps a task may fail before it is given up on               |
+| ~stale-processing-seconds~ | ~600~   | age at which a stuck ~processing~ task goes back to pending   |
 
-----------------------------
-
-* Operating a deployment
-
-** Running it as a service
-
-pingwing is a long-running process; the queue worker starts with the server and is cancelled on ~SIGINT~.  A ~systemd~ unit (or a Guix ~shepherd~ service) that runs ~maak production-server~ in the checkout, with ~WorkingDirectory~ set to it, is all that is needed.  Reserve enough of a shutdown grace period for the worker to finish a sweep; on restart, anything it did not finish is requeued by the stale-task sweep.
-
-** The database
-
-SQLite in WAL mode: back up by copying ~pingwing.db~ (plus the ~-wal~ and ~-shm~ files) while the service is stopped, or use ~sqlite3 pingwing.db ".backup backup.db"~ while it runs.  The migrations that build and extend the schema are under ~resources/migrations/sqlite/~ and are applied by ~maak migrate~, which is mutastructura; the ~migrations_history~ table is the record of what a deployment has run, and the fastest way to see where a database stands.
-
-** Logs
-
-The worker reports to stdout: each failed delivery with its reason, each requeue, each task given up on, and each batch it runs.  Point the service's stdout at wherever your system keeps logs.  The same reasons are in the ~last-error~ column, readable with ~GET /api/v1/tasks~ or ~sqlite3~.
-
-----------------------------
+------------------
 
 * Development
+:PROPERTIES:
+:CUSTOM_ID: development
+:END:
 
-#+begin_src shell
+#+begin_src sh
 maak --list          # every task
 maak dev             # hot-reloading development server (watchexec + restart)
 maak test            # run the test suite
@@ -393,18 +921,83 @@ maak fmt             # format the Scheme sources the Guix way
 maak build-manual    # render this README to HTML
 #+end_src
 
-The tests are [[https://codeberg.org/jjba23/veritas][Veritas]] suites, and where they sit is what tells the runner what they are:
+** A map of the tree
+:PROPERTIES:
+:CUSTOM_ID: a-map-of-the-tree
+:END:
 
-- ~test/veritas/unit/~ holds the specs ~maak test~ runs.  Each file names the module it must have for its position (~(veritas unit mail-spec)~), which is how the runner loads it; the encodings that keep a message intact on the wire, the shape of the message itself, what each template promises to say, and -- against a temporary SQLite file built from the project's own migrations -- what the task repository stores and reads back are all covered there.
-- ~test/veritas/benchmark/~ holds the benchmarks ~maak test-benchmark~ runs: what a notification-sized body costs to encode, and what a sweep's read and a claim cost through kracht and SQLite.
+- ~app/api/v1.scm~ -- the routes: the task inbox, the queue view and liveness,
+  and the list of template names the API accepts;
+- ~lib/pingwing/~ -- the library the application is written with:
+  - =domain/task.scm= and =domain/repo.scm= -- what a task *is*, and the
+    repository interface the worker and the routes are written against;
+  - =sqlite/task.scm= and =sqlite/util.scm= -- how a task is stored and read, and
+    the connection, the lock and the value binding every statement goes through;
+  - =tasks.scm= -- the worker: the sweeps, the claims, the fibers and the threads
+    that make a delivery;
+  - =mail.scm= -- the SMTP conversation, the message bytes and the encodings that
+    keep them intact on the wire;
+  - =html.scm= and =css.scm= -- the furniture and the palette every message is
+    built from;
+  - =templates/= -- one module per message, and the only place a mail's words
+    live;
+- ~resources/migrations/sqlite/~ -- the schema, oldest first, applied by
+  ~maak migrate~;
+- ~test/veritas/unit/~ and ~test/veritas/benchmark/~ -- the specs and the
+  benchmarks, one file per area;
+- ~conf/artanis.conf= and =conf/production.conf~ -- the port, the database, the
+  server core and the cookie lifetime;
+- ~ENTRY~ -- Artanis's entry file: the static file types, the gettext domain,
+  and the settings and the worker that start with the server;
+- ~maak.scm=, =manifest.scm=, =channels.scm~ -- the tasks, the packages, and the
+  revision they are pinned to;
+- ~docs/~ -- the manual's own pictures and the script that redraws them;
+- ~pub/~ -- everything the browser is served (pingwing's own surfaces are an API,
+  so there is little of it).
 
-Neither needs a mail server, and only the repository specs need a database -- one they make and fill themselves, under the temporary directory.
+** Tests
+:PROPERTIES:
+:CUSTOM_ID: tests
+:END:
 
-----------------------------
+The tests are [[https://codeberg.org/jjba23/veritas][Veritas]] suites, and where they sit is what tells the runner what
+they are:
+
+- ~test/veritas/unit/~ holds the specs ~maak test~ runs.  Each file names the
+  module it must have for its position (~(veritas unit mail-spec)~), which is how
+  the runner loads it; the encodings that keep a message intact on the wire, the
+  shape of the message itself, what each template promises to say, and -- against
+  a temporary SQLite file built from the project's own migrations -- what the
+  task repository stores and reads back are all covered there.
+- ~test/veritas/benchmark/~ holds the benchmarks ~maak test-benchmark~ runs: what
+  a notification-sized body costs to encode, and what a sweep's read and a claim
+  cost through kracht and SQLite.
+
+Neither needs a mail server, and only the repository specs need a database -- one
+they make and fill themselves, under the temporary directory.
+
+** Continuous integration
+:PROPERTIES:
+:CUSTOM_ID: continuous-integration
+:END:
+
+A push to the =trunk= branch is picked up by [[https://woodpecker-ci.org/][Woodpecker]]
+(~.woodpecker/byggsteg.yaml~), which asks the jointhefreeworld
+[[https://codeberg.org/jjba23/byggsteg][Byggsteg]] service for a token, submits a job
+for it and polls that job's status.  The job pulls the branch and restarts the
+~pingwing-daemon~, so what is merged is what is running.  Run ~maak test~ before
+you push: the suite is the project's own gate, and it is one command.
+
+------------------
 
 * Details on how tasks are sent via e-mail
+:PROPERTIES:
+:CUSTOM_ID: details-on-how-tasks-are-sent-via-e-mail
+:END:
 
-After a task has been submitted and picked up by the worker, a message like this is produced (the boundary, ~Date~ and ~Message-ID~ are generated per message; short headers shown unwrapped):
+After a task has been submitted and picked up by the worker, a message like this
+is produced (the boundary, ~Date~ and ~Message-ID~ are generated per message;
+short headers shown unwrapped):
 
 #+begin_src http
 MIME-Version: 1.0
@@ -412,7 +1005,7 @@ Date: Wed, 14 Oct 2026 11:46:22 +0200
 Message-ID: <d25c5dad-266f-4a61-9a28-1bec05a548e0@mail.jointhefreeworld.org>
 Subject: WikiMusic - Password Reset 998c42eb-7472-4e12-aa5a-ffdbe754b430
 From: No Reply - WikiMusic <noreply@mail.jointhefreeworld.org>
-To: Josep Bigorra <jjbigorra@gmail.com>
+To: John Doe <john.doe@example.org>
 Content-Type: multipart/alternative; boundary="pingwing-33c2b557-7f27-4339-9a85-2385e7ecde9b"
 
 --pingwing-33c2b557-7f27-4339-9a85-2385e7ecde9b
@@ -427,13 +1020,16 @@ We received a request to reset the password for your account:
 Content-Type: text/html; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
 
-<!DOCTYPE HTML>
-<html><head>...</head><body style="...">...</body></html>
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html;
+ charset=utf-8" />...</head><body class="pw-body" style="...">
+ ... every colour, size and shape written on the element that wears it ...
+</body></html>
 
 --pingwing-33c2b557-7f27-4339-9a85-2385e7ecde9b--
 #+end_src
 
-The worker hands it to libcurl, which speaks SMTP (or STARTTLS then SMTP) to the configured server:
+The worker hands it to libcurl, which speaks SMTP (or STARTTLS then SMTP) to the
+configured server:
 
 #+begin_src fundamental
 >>= sending mail to email-smtp.eu-west-3.amazonaws.com
@@ -447,28 +1043,205 @@ The worker hands it to libcurl, which speaks SMTP (or STARTTLS then SMTP) to the
 > STARTTLS
 < 220 Ready to start TLS
 < 235 Authentication successful.
-> MAIL FROM:<noreply@wikimusic.jointhefreeworld.org>
+> MAIL FROM:<noreply@mail.jointhefreeworld.org>
 < 250 Ok
-> RCPT TO:<jjbigorra@gmail.com>
+> RCPT TO:<john.doe@example.org>
 < 250 Ok
 > DATA
 < 354 End data with <CR><LF>.<CR><LF>
 < 250 Ok 011301968c239ad5-72018cb8-...
 #+end_src
 
-And only then, when the server has said ~250~, is the task written down as ~complete~.
+And only then, when the server has said ~250~, is the task written down as
+~complete~.
 
-----------------------------
+------------------
 
 * Useful tips
+:PROPERTIES:
+:CUSTOM_ID: useful-tips
+:END:
 
-It's recommended to run your SQLite database in WAL mode, for concurrent reads and writes; ~maak init-db~ does that for you.
+It's recommended to run your SQLite database in WAL mode, for concurrent reads
+and writes; ~maak init-db~ does that for you.
 
-----------------------------
+Two more that save a deployment some head-scratching:
+
+- Give the worker room to finish: a service that is killed the instant it is
+  asked to stop leaves a task ~processing~, and the next sweep only picks it up
+  after ~stale-processing-seconds~.  A graceful stop finishes the sweep first.
+- Watch ~last_error~ rather than your mailbox: a refused delivery and a delivery
+  that never left read very differently there, and the column keeps the answer
+  whether or not anybody was watching the log.
+
+------------------
+
+* On accessibility
+:PROPERTIES:
+:CUSTOM_ID: on-accessibility
+:END:
+
+We believe creating accessible interfaces for everyone, including people with
+disabilities, is crucial for equality and helps provide a good user experience.
+
+pingwing's own surfaces are an API, so what it hands to a human is a mail -- and
+a mail is the most constrained interface there is.  So it is built for the
+reader who can see the least of it: a plain-text part that says everything the
+HTML part says, a document that still reads when the whole ~<head>~ is thrown
+away, semantic markup under the styling, and wording that says what happened and
+what to do rather than what the system did.
+
+------------------
+
+* Contributing
+:PROPERTIES:
+:CUSTOM_ID: contributing
+:END:
+
+Contributing to free software (as in freedom) is a uniquely beautiful act
+because it embodies principles of generosity, collaboration, and empowerment.
+We welcome everyone to feel invited to the PingWing Project, and we encourage
+active contribution in all forms: to improve it and/or suggest improvements,
+report issues, brainstorm with me, make it more modular/flexible, etc.
+
+Find here the [[https://lucidplan.jointhefreeworld.org/tickets/pingwing][Backlog and Kanban]] boards for pingwing.
+
+** Ways in
+:PROPERTIES:
+:CUSTOM_ID: ways-in
+:END:
+
+Nothing here is a big ask, and every one of these is a real contribution:
+
+- *Tell me what is missing or awkward.*  A ticket on the
+  [[https://lucidplan.jointhefreeworld.org/tickets/pingwing][board]], a message to
+  <jjbigorra@gmail.com>, or a note on an issue -- a bug report from somebody
+  actually running the thing is worth more than a feature list.
+- *Write a template.*  A message another project of yours needs is a Scheme
+  module and two names in a dispatch (see [[#templates][Templates]]); the templates that ship
+  are the shapes that were needed, not the shapes that are possible.
+- *Send a PR/patch.*  Branches and patches on
+  [[https://codeberg.org/jjba23/pingwing][the forge]] are how the code arrives;
+  a small, explained change is easier to review than a large one, and a change
+  that comes with the story of *why* is easier still.
+- *Run a deployment.*  Fork it, point your own programs at it, and tell us where
+  the API was awkward to call: that is what shapes the next version of it.
+
+** Reporting a bug or an idea
+:PROPERTIES:
+:CUSTOM_ID: reporting-a-bug-or-an-idea
+:END:
+
+A report is easiest to act on when it says what you did, what you expected and
+what happened instead -- plus your Guile, Artanis and (if you use it) Guix
+versions, whether you are on a released tag or ~trunk~, and, when a delivery is
+what went wrong, the ~last_error~ the task ended up with.
+
+** Sending a PR/patch
+:PROPERTIES:
+:CUSTOM_ID: sending-a-pr-patch
+:END:
+
+The branch is ~trunk~.  Small, focused commits are the easiest to review; run
+~maak fmt~ to format Scheme according to the Guix style guide, and ~maak test~
+before you send anything.  A change to a message's words or styling belongs in
+that template's module or in the shared furniture in ~lib/pingwing/html.scm~ --
+not in the worker -- and a change that alters a message is worth redrawing the
+showcase for (~./docs/make-demo-gif.sh~).
+
+** Trying it before you trust it
+:PROPERTIES:
+:CUSTOM_ID: trying-it-before-you-trust-it
+:END:
+
+Everything here is meant to be read and run: clone it, run ~maak init-db~ and
+~maak server~, post the task from [[#post-api-v1-tasks][~POST /api/v1/tasks~]] at it, and watch the row
+move from ~pending~ to ~complete~.  If something in this manual does not match
+what the code does, that is a bug in the manual -- please tell us.
+
+** AI Policy
+:PROPERTIES:
+:CUSTOM_ID: ai-policy
+:END:
+
+This project adheres to the [[https://jointhefreeworld.org/blog/articles/personal/jointhefreeworld-ai-policy/index.html][jointhefreeworld AI (Artificial Intelligence) policy]].
+
+Our core principle is simple: *AI should assist human creativity and
+problem-solving, never replace human reasoning.*
+
+While tools like Large Language Models (LLMs) and interactive chatbots can be
+beneficial for reviewing, refactoring small functions, or acting as a sounding
+board, they should be used with moderation.
+
+We require a human in the loop for all contributions.  The use of autonomous AI
+agents to automatically generate and submit pull requests to this project is
+strictly prohibited.
+
+** Code of conduct
+:PROPERTIES:
+:CUSTOM_ID: code-of-conduct
+:END:
+
+This project adheres to the jointhefreeworld code of conduct. Find it here:
+
+https://jointhefreeworld.org/blog/articles/personal/jointhefreeworld-code-of-conduct/index.html
+
+In summary, we foster an inclusive, respectful, and cooperative environment for
+all contributors and users of this free software project. Inspired by the ideals
+of the GNU Project, we strive to uphold freedom, equality, and community as
+guiding principles. We believe that collaboration in a community of mutual
+respect is essential to creating excellent free software.
+
+------------------
+
+* Licensing
+:PROPERTIES:
+:CUSTOM_ID: licensing
+:END:
+
+pingwing and all of its source code are free software, licensed under the GNU
+Affero General Public License v3 (or newer at your convenience).
+
+https://www.gnu.org/licenses/agpl-3.0.html
+
+The documentation and examples, including this document, which are provided with
+pingwing, are all licensed under the GNU Free Documentation License v1.3 (or
+newer at your convenience).
+
+https://www.gnu.org/licenses/fdl-1.3.html
+
+** On the fonts a message asks for
+:PROPERTIES:
+:CUSTOM_ID: on-the-fonts-a-message-asks-for
+:END:
+
+Lucida fonts are proprietary typefaces originally developed by Bigelow & Holmes.
+They remain a long-time favorite for many people and are very legible in many
+situations and hardware/software.  While they are bundled pre-installed on many
+operating systems and platforms, they remain proprietary fonts.
+
+A pingwing message does not ship a font: it names Lucida in its styles and asks
+for it from the project's own asset host, and a client that does not have it --
+or refuses to fetch it, which is most of them -- reads the message in its own
+system sans.  The declarations are a courtesy to the clients that honour them,
+never a requirement for reading a message.
+
+You may use these font files under principles of fair use or for local
+development and non-commercial purposes, provided it is not for profit and used
+without securing a proper commercial license where required by law. Users and
+contributors are solely responsible for ensuring their usage complies with
+applicable software licensing terms and intellectual property rights.
+
+------------------
 
 * On Reproducibility: Why GNU Guix?
+:PROPERTIES:
+:CUSTOM_ID: on-reproducibility-why-gnu-guix
+:END:
 
-A build should never fail because "it worked on my machine." Reliable software development requires explicit, bit-for-bit reproducibility and a functional approach to package management and system deployment.
+A build should never fail because "it worked on my machine." Reliable software
+development requires explicit, bit-for-bit reproducibility and a functional
+approach to package management and system deployment.
 
 #+BEGIN_EXPORT html
 <a href="https://guix.gnu.org/">
@@ -476,52 +1249,92 @@ A build should never fail because "it worked on my machine." Reliable software d
 </a>
 #+END_EXPORT
 
-- *Declarative Build Graphs:* Packages are pure functions of their inputs with no implicit system state.
-- *Programmable with Guile:* Full system and package configurations written in [[https://www.gnu.org/software/guile/][Guile Scheme]] rather than rigid DSLs or static files.
-- *Time Travel:* Rebuild the exact system state from any point in git history using ~guix time-machine~.
-- *Atomic Operations:* Instantly upgrade or roll back environments without leaving orphaned dependencies or broken states.
-- *Unified Tooling:* One tool manages development shells, isolated containers, package builds, and full system configurations.
+- *Declarative Build Graphs:* Packages are pure functions of their inputs with no
+  implicit system state.
+- *Programmable with Guile:* Full system and package configurations written in
+  [[https://www.gnu.org/software/guile/][Guile Scheme]] rather than rigid DSLs or static files.
+- *Time Travel:* Rebuild the exact system state from any point in [[https://git-scm.com/][git]] history
+  using ~guix time-machine~.
+- *Atomic Operations:* Instantly upgrade or roll back environments without
+  leaving orphaned dependencies or broken states.
+- *Unified Tooling:* One tool manages development shells, isolated containers,
+  package builds, and full system configurations.
 
------------------
+pingwing is built on that: ~channels.scm~ pins the Guile and Guix revision every
+task runs under, ~manifest.scm~ names the packages, and each =maak= task is run
+through both -- which is why a bug report that says "it fails on trunk" is a
+reproducible statement rather than a conversation about toolchains.
 
-* Licensing
+------------------
 
-pingwing and all of its source code are free software, licensed under the GNU Affero General Public License v3 (or newer at your convenience).
+* On GNU Artanis
+:PROPERTIES:
+:CUSTOM_ID: on-gnu-artanis
+:END:
 
-https://www.gnu.org/licenses/agpl-3.0.html
+Find the documentation for Artanis here: https://www.gnu.org/software/artanis/manual/
 
-The documentation and examples, including this document, which are provided with pingwing, are all licensed under the GNU Free Documentation License v1.3 (or newer at your convenience).
+GNU Artanis is the first production-level modern Web framework of the Scheme
+programming language.
 
-https://www.gnu.org/licenses/fdl-1.3.html
+It is designed and maintained to be robust, fast, and easy to use for
+professional web development.
 
-----------------------
+Here lies not just a framework, but a canvas where your ideas take flight with
+remarkable speed and grace. Artanis isn't about wrestling with complexity; it's
+about the joy of creation.
 
-* AI Policy
+It's about harnessing the power of a robust and mature language to build
+something truly your own, something beautiful, nimble, flexible, powerful,
+efficient, understandable and maintainable. GNU Artanis was Certificated as
+Awesome Project at 2013 Lisp in summer projects.
 
-This project adheres to the [[https://jointhefreeworld.org/blog/articles/personal/jointhefreeworld-ai-policy/index.html][jointhefreeworld AI (Artificial Intelligence) policy]].
+One day, the folks at GNU were discussing what language they would write the GNU
+website in - and many chose [[https://www.python.org/][Python]]. But I found that
+strange, because the official extension language of GNU is GNU Guile. And I
+wondered aloud - why not start a brand new project to provide a web framework
+written with GNU Guile? To which [[https://stallman.org/][RMS]] said, "It's cool, I like this idea."
 
-Our core principle is simple: *AI should assist human creativity and problem-solving, never replace human reasoning.*
+But at that time, it was just an idea without a plan.
 
-While tools like Large Language Models (LLMs) and interactive chatbots can be beneficial for reviewing, refactoring small functions, or acting as a sounding board, they should be used with moderation.
+Fortunately, a few months later, the Guile community held a hack-potluck to
+celebrate Guile2 turning two - which is a contest to write a cool program in a
+few weeks. And so, Artanis was born.
 
-We require a human in the loop for all contributions. The use of autonomous AI agents to automatically generate and submit pull requests to this project is strictly prohibited.
+History:
 
--------------------
+    February 2013 - Artanis born at the GNU Guile hack-potluck.
+    2013 - Artanis submitted to "Lisp In Summer Projects" contest. Received "Certificated awesome project" award in 2014.
+    1st January, 2015 - the first stable version Artanis-0.0.1 was released.
+    19th January, 2015 - offers Artanis to [[https://www.fsf.org/][FSF]]/GNU, and RMS inducts it as an official GNU project. Artanis becomes GNU Artanis.
+    29 December 2021 - GNU Artanis donates to HardenedLinux community to connect with product environment more tightly.
 
-* Code of conduct
+------------------
 
-This project adheres to the jointhefreeworld code of conduct. Find it here:
+* Thanks
+:PROPERTIES:
+:CUSTOM_ID: thanks
+:END:
 
-https://jointhefreeworld.org/blog/articles/personal/jointhefreeworld-code-of-conduct/index.html
+PingWing stands on a lot of other free software -- [[https://codeberg.org/jjba23/hygguile][hygguile]],
+[[https://codeberg.org/jjba23/kracht][kracht]], [[https://codeberg.org/jjba23/scriba][scriba]],
+[[https://codeberg.org/jjba23/bewaking][bewaking]], [[https://codeberg.org/jjba23/orgwebalchemy][orgwebalchemy]],
+[[https://codeberg.org/jjba23/mutastructura][mutastructura]], [[https://codeberg.org/jjba23/veritas][veritas]],
+[[https://codeberg.org/jjba23/maak][maak]], [[https://codeberg.org/jjba23/byggsteg][byggsteg]],
+[[https://codeberg.org/jjba23/lucidplan][lucidplan]] and [[https://codeberg.org/jjba23/wikimusic][wikimusic]]
+-- most of them part of [[https://jointhefreeworld.org/][jointhefreeworld]], all of them worth a look.  A
+notification service is only ever as useful as the programs that ask it to
+speak, and these are the ones that do.
 
-In summary, we foster an inclusive, respectful, and cooperative environment for all contributors and users of this free software project. Inspired by the ideals of the GNU Project, we strive to uphold freedom, equality, and community as guiding principles. We believe that collaboration in a community of mutual respect is essential to creating excellent free software.
-
-------------------------
+------------------
 
 * PingWing Project
+:PROPERTIES:
+:CUSTOM_ID: pingwing-project
+:END:
 
-Contributing to free software is a uniquely beautiful act because it embodies principles of generosity, collaboration, and empowerment.
+#+name: pingwing-logo
+[[https://jointhefreeworld.org/static-assets/pingwing/logo-small.png]]
 
-We welcome everyone to feel invited to the pingwing Project, and encourage active contribution in all forms, to improve it and/or suggest improvements, brainstorm with me, make it more modular/flexible, etc, feel free to contact me <jjbigorra@gmail.com> to chat, discuss or report feedback.
-
-Find here the Backlog and Kanban boards for pingwing: https://lucidplan.jointhefreeworld.org/tickets/pingwing
+Find here the [[https://lucidplan.jointhefreeworld.org/tickets/pingwing][Backlog and Kanban]] boards for pingwing, or write to me,
+<jjbigorra@gmail.com>, to chat, discuss or report feedback.

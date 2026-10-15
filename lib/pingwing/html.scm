@@ -51,6 +51,26 @@
                          mail-facts
                          mail-mono))
 
+;; `sxml->xml' writes an element that has no children at all as a
+;; self-closing tag -- `<div ... />' -- which is XML, not HTML.  An HTML
+;; parser reads that as an *opening* tag and makes everything written after it
+;; its children, so a panel that did it would swallow the whole message body
+;; and the mail would arrive as an empty card.  Any element below that may end
+;; up with nothing to hold therefore carries this: `as-children' is the one
+;; that leaves nothing out, and the elements whose content a caller supplies
+;; are passed through it so that no caller can hand in a list that empties
+;; them.
+(define no-content
+  "")
+
+;; CHILDREN with a placeholder in it when it has none, so that an element built
+;; from a caller's list is never written self-closing.  `(or children ...)'
+;; would not do: the empty list is not false in Scheme, so it would slip
+;; through and the element would be written as `<div ... />' anyway.
+(define (as-children children)
+  (if (null? children)
+      (list no-content) children))
+
 (define-public meta-charset
   `(meta (@ (http-equiv . Content-Type)
             (content . "text/html; charset=utf-8"))))
@@ -125,7 +145,8 @@
   `(div (@ (class . "pw-accent")
            (style ,(mk-style `(("height" . "6px") ("line-height" . "0")
                                ("font-size" . "0")
-                               ("background-image" . "linear-gradient(90deg,#a7c080,#e67e80,#dbbc7f,#7fbbb3)")))))))
+                               ("background-image" . "linear-gradient(90deg,#a7c080,#e67e80,#dbbc7f,#7fbbb3)")))))
+        ,no-content))
 
 ;; The panel: what every message sits in.  `backdrop-filter' is declared for
 ;; the clients that would honour it, but the visible glass is the translucent
@@ -160,7 +181,7 @@
                         (list (mail-accent))
                         '())
                   (div (@ (style "padding:38px 34px;"))
-                       ,@content)))))
+                       ,@(as-children content))))))
 
 (define* (mail-button #:key href label)
   `(table (@ (role . "presentation")
@@ -194,7 +215,8 @@
                                                   'rule)))
                                ("margin" . "24px 0")
                                ("font-size" . "0")
-                               ("line-height" . "0")))))))
+                               ("line-height" . "0")))))
+        ,no-content))
 
 ;; A second, lighter pane inside the first, for the few facts a message wants
 ;; set apart -- the ticket it is about, the account a reset concerns.
@@ -210,11 +232,36 @@
                                ("border-radius" . "16px")
                                ("padding" . "18px 20px")
                                ("margin" . "22px 0")))))
-        ,@content))
+        ,@(as-children content)))
 
 ;; A two-column list of label/value facts, set in a small pane: what a reset
 ;; is about or what a ticket says, at a glance.  A row whose value is #f is
 ;; left out, so a template can pass an optional detail without branching.
+(define (fact-row row)
+  (let ((label (car row))
+        (value (cdr row)))
+    (and value
+         (not (equal? value ""))
+         `(tr (td (@ (style ,(mk-style `(("color" unquote
+                                          (color-of mail-light
+                                                    'muted))
+                                         ("font-family" unquote
+                                          mail-sans-stack)
+                                         ("font-size" . "13px")
+                                         ("padding" . "4px 12px 4px 0")
+                                         ("vertical-align" . "top")))))
+                  ,label)
+              (td (@ (style ,(mk-style `(("color" unquote
+                                          (color-of mail-light
+                                                    'heading))
+                                         ("font-family" unquote
+                                          mail-sans-stack)
+                                         ("font-size" . "14px")
+                                         ("padding" . "4px 0")
+                                         ("text-align" . "right")
+                                         ("vertical-align" . "top")))))
+                  ,value)))))
+
 (define (mail-facts rows)
   `(table (@ (role . "presentation")
              (width . "100%")
@@ -222,36 +269,7 @@
              (cellspacing . "0")
              (border . "0")
              (style "border-collapse:collapse;"))
-          ,@(filter-map (lambda (row)
-                          (let ((label (car row))
-                                (value (cdr row)))
-                            (and value
-                                 (not (equal? value ""))
-                                 `(tr (td (@ (style ,(mk-style `(("color"
-                                                                  unquote
-                                                                  (color-of
-                                                                   mail-light
-                                                                   'muted))
-                                                                 ("font-family"
-                                                                  unquote
-                                                                  mail-sans-stack)
-                                                                 ("font-size" . "13px")
-                                                                 ("padding" . "4px 12px 4px 0")
-                                                                 ("vertical-align" . "top")))))
-                                          ,label)
-                                      (td (@ (style ,(mk-style `(("color"
-                                                                  unquote
-                                                                  (color-of
-                                                                   mail-light
-                                                                   'heading))
-                                                                 ("font-family"
-                                                                  unquote
-                                                                  mail-sans-stack)
-                                                                 ("font-size" . "14px")
-                                                                 ("padding" . "4px 0")
-                                                                 ("text-align" . "right")
-                                                                 ("vertical-align" . "top")))))
-                                          ,value))))) rows)))
+          ,@(as-children (filter-map fact-row rows))))
 
 ;; Wrap VALUE in the monospaced, slightly accented voice the templates use
 ;; for the facts a reader may want to copy: an account name, a ticket number,
