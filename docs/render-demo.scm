@@ -11,7 +11,10 @@
 ;;; document with one addition, a rule telling the page to fill the height of
 ;;; the window the screenshot is taken in, so that a mail shorter than the
 ;;; window does not leave the area under it unpainted.  Nothing else about the
-;;; message changes, and only the second copy is ever photographed.
+;;; message changes, and only the second copy is ever photographed.  Neither
+;;; copy is patched in any other way: the doctype a template writes is the one
+;;; the browser is given, so the picture in the manual is of the document
+;;; itself rather than of a document this script repaired.
 ;;;
 ;;; `docs/make-demo-gif.sh' runs this and then the browser and the encoder; run
 ;;; it from the repository root, inside the project's environment:
@@ -28,8 +31,10 @@
              (pingwing templates system-alert)
              (pingwing templates lucidplan-new-ticket))
 
-(define frames-dir "tmp/demo/frames")
-(define shots-dir "tmp/demo/shots")
+(define frames-dir
+  "tmp/demo/frames")
+(define shots-dir
+  "tmp/demo/shots")
 
 ;; What makes a page as tall as the window it is looked at in.  The mail's own
 ;; inline styles paint the body, so giving it a minimum height of one viewport
@@ -44,10 +49,10 @@
 (define (write-file path contents)
   (call-with-output-file path
     (lambda (port)
-      ;; The templates return a document that begins at <html>; a browser reads
-      ;; a page with no doctype in quirks mode, so the doctype is put back for
-      ;; the screenshot only.
-      (display "<!DOCTYPE html>\n" port)
+      ;; Written exactly as the template returned it.  The doctype goes in the
+      ;; frame because the template wrote it, not because this script does --
+      ;; which is the point of the exercise: what is photographed is the same
+      ;; document a mail client is handed, down to its first line.
       (display contents port)))
   (format #t "wrote ~a~%" path))
 
@@ -55,14 +60,12 @@
   (write-file (format #f "~a/~a.html" frames-dir name) html)
   (write-file (format #f "~a/~a.html" shots-dir name)
               (string-replace-substring html "</head>"
-                                        (string-append viewport-fill
-                                                       "</head>"))))
+                                        (string-append viewport-fill "</head>"))))
 
 ;; The ticket notice: what lucidplan asks pingwing to send when somebody opens
 ;; a ticket in one of its projects, and the message the showcase opens on.
 (render! "1-new-ticket"
-         (lucidplan-new-ticket-html-template
-          #:system-name "Lucidplan"
+         (lucidplan-new-ticket-html-template #:system-name "Lucidplan"
           #:project-name "Pingwing"
           #:project-human-id "pingwing"
           #:ticket-human-id 12
@@ -78,16 +81,16 @@
           "https://lucidplan.jointhefreeworld.org/pingwing/tickets/12"))
 
 (render! "2-password-reset"
-         (password-reset-html-template
-          #:system-name "WikiMusic"
+         (password-reset-html-template #:system-name "WikiMusic"
           #:user "john.doe@example.org"
           #:reset-link
           "https://wikimusic.jointhefreeworld.org/reset/2f6a4d3e1c2b4a5f9e8d"))
 
 (render! "3-system-alert"
-         (system-alert-html-template
-          #:system-name "Pingwing"
-          #:alert-value
-          "disk usage at 94% on mail-01\nSMTP queue depth 128\ndelivery latency p95 4.2s"))
+         (system-alert-html-template #:system-name "Pingwing"
+                                     #:alert-value
+                                     "disk usage at 94% on mail-01
+SMTP queue depth 128
+delivery latency p95 4.2s"))
 
 (format #t "~a frames rendered~%" 3)

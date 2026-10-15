@@ -33,7 +33,6 @@
   #:use-module (pingwing css)
   #:use-module (pingwing html)
   #:use-module (ice-9 string-fun)
-  #:use-module (sxml simple)
   #:use-module (ice-9 iconv)
   #:export (lucidplan-new-ticket-html-template
             lucidplan-new-ticket-plain-template))
@@ -170,8 +169,7 @@
                                              ,(gettext
                                                "You receive this because you take part in this project; no action is needed to keep receiving them.")))))
          (_ tree))
-    (with-output-to-string (lambda ()
-                             (sxml->xml tree)))))
+    (mail-document->string tree)))
 
 (define* (lucidplan-new-ticket-plain-template #:key system-name
                                               project-name

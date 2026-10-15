@@ -26,7 +26,6 @@
   #:use-module (pingwing css)
   #:use-module (pingwing html)
   #:use-module (ice-9 string-fun)
-  #:use-module (sxml simple)
   #:use-module (ice-9 iconv)
   #:export (system-alert-html-template system-alert-plain-template))
 
@@ -42,23 +41,9 @@
                                              ,(gettext
                                                "An alert has been triggered from a system you watch. The details are below."))
                                           ,(mail-inner (list `(div (@
-                                                                      (class . "pw-mono")
+                                                                      (class . "pw-alert")
                                                                       (style ,
-                                                                             (mk-style `
-                                                                              (
-                                                                               ("font-family"
-                                                                                unquote
-                                                                                mail-mono-stack)
-                                                                               ("font-size" . "13px")
-                                                                               
-                                                                               ("color"
-                                                                                unquote
-                                                                                
-                                                                                (color-of
-                                                                                 mail-light
-                                                                                 'heading))
-                                                                               ("white-space" . "pre-wrap")
-                                                                               ("word-break" . "break-word")))))
+                                                                             (style-of 'alert)))
                                                                    ,(or
                                                                      alert-value
                                                                      ""))))
@@ -68,8 +53,7 @@
                                              ,(gettext
                                                "This message was sent automatically; reply to it if the alert needs a human.")))))
          (_ tree))
-    (with-output-to-string (lambda ()
-                             (sxml->xml tree)))))
+    (mail-document->string tree)))
 
 (define* (system-alert-plain-template #:key system-name alert-value)
   (let* ((content (list (format #f "~a ~a"

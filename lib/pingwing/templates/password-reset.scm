@@ -26,7 +26,6 @@
   #:use-module (pingwing css)
   #:use-module (pingwing html)
   #:use-module (ice-9 string-fun)
-  #:use-module (sxml simple)
   #:use-module (ice-9 iconv)
   #:export (password-reset-html-template password-reset-plain-template))
 
@@ -67,8 +66,7 @@
                                              ,(gettext
                                                "This message was sent because someone asked to reset the password on this account. If that was not you, no action is needed and your password has not changed.")))))
          (_ tree))
-    (with-output-to-string (lambda ()
-                             (sxml->xml tree)))))
+    (mail-document->string tree)))
 
 (define* (password-reset-plain-template #:key system-name user reset-link)
   (let* ((content (list (format #f "~a ~a"

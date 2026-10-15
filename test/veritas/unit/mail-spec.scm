@@ -97,6 +97,17 @@
 
 ;;; ====== the message ======
 
+(define (occurrences needle haystack)
+  "How many times NEEDLE appears in HAYSTACK."
+  (let loop
+    ((from 0)
+     (seen 0))
+    (let ((at (string-contains haystack needle from)))
+      (if at
+          (loop (+ at
+                   (string-length needle))
+                (+ seen 1)) seen))))
+
 (define message-suite
   (let ((m (build-mail-message #:id "the-id"
                                #:from-name "No Reply"
@@ -138,7 +149,23 @@
                                            (string-replace-substring m "\r\n"
                                                                      ""))
                                #:name
-                               "no bare newline survives into the message")))))
+                               "no bare newline survives into the message"))
+           ;; A message that reaches a client without a doctype is read as
+           ;; legacy HTML -- quirks mode -- where the widths and the table box
+           ;; a mail is laid out with are not the ones its styles ask for.  The
+           ;; doctype belongs to the document, which writes it where it is
+           ;; built (`mail-document->string'), so this assembler says nothing
+           ;; about it: a second one is not a document, and one invented here
+           ;; would be a doctype the document never wrote.  That the document's
+           ;; own reaches a client is asserted where a document is at hand --
+           ;; `templates-spec', over the messages a template produces.
+           (test "the HTML part is carried through as the caller wrote it"
+                 (assert-contains #:name "the body's own markup survives"
+                                  #:expect m
+                                  #:got "<p>html body</p>")
+                 (assert-equal #:name "no doctype is invented here"
+                               #:expect 0
+                               #:got (occurrences "<!DOCTYPE" m))))))
 
 (define (spec)
   (veritas-run quoted-printable-suite headers-suite message-suite))

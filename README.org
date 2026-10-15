@@ -23,7 +23,7 @@ Public License v3 or newer, and it is a key component of the
 [[https://jointhefreeworld.org/][jointhefreeworld]] ecosystem.
 
 #+name: pingwing-demo
-#+caption: Three of the messages pingwing sends -- the ticket notice for lucidplan, a password reset and a system alert -- rendered by the code itself for a mail client, and then the ticket notice again as a client that asks for a dark palette.
+#+caption: Three of the messages pingwing sends -- the ticket notice for lucidplan, a password reset and a system alert -- rendered by the code itself for a mail client, and then the ticket notice and the alert again as a client that asks for a dark palette.
 [[https://codeberg.org/jjba23/pingwing/raw/branch/trunk/docs/pingwing-demo.gif]]
 
 - 💾 *Read the source (and send PRs/patches):* [[https://codeberg.org/jjba23/pingwing][codeberg.org/jjba23/pingwing]]
@@ -145,7 +145,10 @@ migrations), [[https://codeberg.org/jjba23/veritas][veritas]] (the test runner),
 - *Pretty mail*: a plain-text part and an HTML part built from SXML, styled
   inline in the everforest palette the jointhefreeworld sites wear -- a frosted
   panel over a soft gradient, a hairline of colour along the top, and a dark
-  palette for the clients that ask for one.
+  palette for the clients that ask for one.  The two readings come out of one
+  table of colours, so a message cannot be readable in one and accidentally
+  unreadable in the other, and a suite asserts that every text colour clears
+  4.5:1 on every surface it is set on, in both.
 - *Templates as Scheme modules*: adding one is a file, a name in a dispatch and
   a name in a list.
 - *An API that refuses precisely*: a wrong request is answered ~400~ with a
@@ -685,7 +688,71 @@ button, the fact list, the footer, the two text styles -- lives in
 ~lib/pingwing/html.scm~ and ~lib/pingwing/css.scm~, so every template agrees by
 construction.
 
-One rule of that module is worth knowing before you touch it: an element with no
+** The two readings of one palette
+:PROPERTIES:
+:CUSTOM_ID: the-two-readings-of-one-palette
+:END:
+
+Dark mode in a mail is a trap, and it is worth knowing how this one is built
+before changing a colour.
+
+The trap is that an inline style outranks anything the document's own ~<head>~
+can say.  Since every colour has to be inline, the only thing a media query can
+still reach is a *class* -- so a colour written on an element that wears no class
+is a colour no dark palette can ever correct.  That is exactly how the dark mode
+first shipped: the fact rows and both links carried a colour and no class, so in
+a dark client they kept their *light* colours while every surface around them
+re-pointed -- the ticket's own title in its fact row measured 1.26:1 and the
+labels beside it 2.78:1, in a message whose headings and body text were
+perfectly legible.  Measuring it from the pixels the browser painted is also
+what caught the second half of the bug, which had nothing to do with dark mode at
+all: the light reading's own small print sat at 2.90:1, under the floor it was
+supposed to be chosen to clear.
+
+So the colours live in one table in ~lib/pingwing/css.scm~ -- ~mail-styles~ --
+and nothing paints outside it.  Each entry is named after the class its element
+wears (~heading~ is ~pw-heading~), and it is *read twice*: once in the light
+palette for the inline style, and once in the dark one for the head's one media
+query, which emits only the declarations whose two readings actually differ and
+carries ~!important~ to beat the inline style.  Adding a colour therefore adds it
+to both readings at once, and forgetting one is not possible: there is nowhere to
+put a colour that both readings would not see.
+
+Two suites hold that up, over every template rather than over a sample:
+
+- every element that paints wears a class, and every class it wears is a named
+  style -- so nothing can be painted that the dark override cannot reach;
+- every text colour clears *4.5:1* on every surface it is set on, in both
+  readings.  The measurement is the composite a reader actually gets, because in
+  a mail nothing is flat: the panel is translucent over the page's gradient and
+  the inner pane is translucent over the panel, so a text colour is measured
+  against the result of those layers, at the gradient's worst stop.  The suite
+  also holds the arithmetic itself to its two known answers -- white on black is
+  the 21:1 a ratio can reach, a colour on itself is 1:1 -- because a measurement
+  that silently returned nonsense would otherwise pass everything;
+- and every text colour a message actually ships is read back out of it and has
+  to be one of the measured ones -- since a list of what is measured is only as
+  good as what keeps it complete, and the floor would otherwise pass a new colour
+  by never looking at it.
+
+The dark palette is chosen, not derived: it is not an inversion of the light one
+but a second reading in the same everforest family, with its own greys and its own
+green, picked so the glass still reads as glass on a dark page.  The only thing
+the two readings share unconditionally is the accent hairline along the top and
+the ink on the button, which is dark on green in both.
+
+The document is a whole one, and says so: it opens with ~<!DOCTYPE html>~, written
+where the document is built (~mail-document->string~ in ~lib/pingwing/html.scm~)
+rather than bolted on by the assembler that wraps the part in MIME.  That matters
+more than it looks.  A client told nothing reads a message as legacy HTML --
+quirks mode -- where the widths, the line box and the table sizing a mail is laid
+out with are not the ones its styles ask for; and because every template
+serialises through that one function, a fourth template cannot forget the
+doctype, while the assembler cannot add a second one.  The end of that chain is
+checked too: ~test/veritas/unit/templates-spec.scm~ builds a message out of a
+template and asserts that it opens the HTML part with the doctype exactly once.
+
+One more rule of that module is worth knowing before you touch it: an element with no
 children at all is written by ~sxml->xml~ as a self-closing tag, ~<div ... />~,
 which is XML rather than HTML -- an HTML parser reads it as an *opening* tag and
 makes everything after it its children.  The elements that may end up holding
@@ -706,11 +773,22 @@ guix shell -m manifest.scm -- ./docs/make-demo-gif.sh
 #+end_src
 
 The script renders three messages through the same modules a delivery calls
-(~docs/render-demo.scm~), photographs each one in a headless browser -- once in
-the light palette, and the ticket notice again in the dark one -- and stitches
-them into ~docs/pingwing-demo.gif~.  Change a template and the picture changes
-with it; it needs a Chromium-family browser and ImageMagick, and it touches no
-network.
+(~docs/render-demo.scm~) into ~tmp/demo/frames/~, photographs them in a headless
+browser -- the three read in the light palette, and the ticket notice and the
+alert read again in the dark one -- and stitches the five frames into
+~docs/pingwing-demo.gif~.  Change a template and the picture changes with it; it
+needs a Chromium-family browser and ImageMagick, and it touches no network.
+
+Two deliberate choices make the frames the same on every machine, and both are
+worth keeping if you edit the script.  The browser is told which palette to read
+with ~--blink-settings=preferredColorScheme~ rather than being allowed to answer
+~prefers-color-scheme~ with whatever the desktop it runs on happens to prefer --
+otherwise "show me the dark reading" would be a coin toss.  And
+~--disable-remote-fonts~ is passed, so the ~@font-face~ sources the head names
+are left unfetched and the picture settles on the fallback stacks instead of
+racing a download: the shots show what a client that refuses a web font sees,
+which is most of them, and they show the same thing on a laptop with no network
+as on a build machine.
 
 ------------------
 
@@ -938,7 +1016,8 @@ maak build-manual    # render this README to HTML
   - =mail.scm= -- the SMTP conversation, the message bytes and the encodings that
     keep them intact on the wire;
   - =html.scm= and =css.scm= -- the furniture and the palette every message is
-    built from;
+    built from, including the one table of styles the light inline styles and the
+    head's dark override are both read out of;
   - =templates/= -- one module per message, and the only place a mail's words
     live;
 - ~resources/migrations/sqlite/~ -- the schema, oldest first, applied by
@@ -969,6 +1048,13 @@ they are:
   shape of the message itself, what each template promises to say, and -- against
   a temporary SQLite file built from the project's own migrations -- what the
   task repository stores and reads back are all covered there.
+  ~templates-spec.scm~ is the one to know when you touch a colour or a tag: it
+  holds the markup each template is handed to a paragraph (nothing closes before
+  it opens), the reach of the dark override (nothing paints without a class that
+  names a style), the contrast floor every colour has to clear in both readings,
+  and the completeness of that last check (a colour a message ships has to be a
+  colour the floor was applied to).  Each of those is asserted over all three
+  templates, so a new template is covered the day it is added.
 - ~test/veritas/benchmark/~ holds the benchmarks ~maak test-benchmark~ runs: what
   a notification-sized body costs to encode, and what a sweep's read and a claim
   cost through kracht and SQLite.
@@ -1020,6 +1106,7 @@ We received a request to reset the password for your account:
 Content-Type: text/html; charset="UTF-8"
 Content-Transfer-Encoding: quoted-printable
 
+<!DOCTYPE html>
 <html lang="en"><head><meta http-equiv="Content-Type" content="text/html;
  charset=utf-8" />...</head><body class="pw-body" style="...">
  ... every colour, size and shape written on the element that wears it ...
@@ -1090,6 +1177,14 @@ reader who can see the least of it: a plain-text part that says everything the
 HTML part says, a document that still reads when the whole ~<head>~ is thrown
 away, semantic markup under the styling, and wording that says what happened and
 what to do rather than what the system did.
+
+Contrast is the one part of that which can be measured, so it is measured rather
+than intended.  Every text colour in both palettes clears *4.5:1* -- the WCAG AA
+floor for body text -- against every surface it is set on, in the reading it is
+set on in; the checks are in ~test/veritas/unit/templates-spec.scm~, the numbers
+are in [[#the-two-readings-of-one-palette][The two readings of one palette]], and the promise is the suite's rather
+than this paragraph's.  A change that dims the small print, in either reading,
+is a failing test rather than a discovery a reader makes.
 
 ------------------
 

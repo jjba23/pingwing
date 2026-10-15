@@ -312,7 +312,9 @@ the Message-ID belong to the message, not to the attempt."
                    "Content-Transfer-Encoding: quoted-printable
 "
                    "\r\n"
-                   "<!DOCTYPE HTML>\r\n"
+                   ;; The document carries its own doctype, written where the
+                   ;; document is built (`mail-document->string'), so nothing
+                   ;; is said here: a second one would not be a document.
                    (quoted-printable-encode body-html)
                    "\r\n"
                    "--"

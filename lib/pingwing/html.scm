@@ -29,6 +29,7 @@
   #:use-module (ice-9 format)
   #:use-module (ice-9 string-fun)
   #:use-module (srfi srfi-1)
+  #:use-module (sxml simple)
   #:use-module (pingwing css)
   #:use-module (ice-9 iconv)
   #:export (meta-charset meta-ie
@@ -49,7 +50,9 @@
                          mail-inner
                          mail-link
                          mail-facts
-                         mail-mono))
+                         mail-mono
+                         mail-doctype
+                         mail-document->string))
 
 ;; `sxml->xml' writes an element that has no children at all as a
 ;; self-closing tag -- `<div ... />' -- which is XML, not HTML.  An HTML
@@ -91,43 +94,21 @@
   `(meta (@ (name . supported-color-schemes)
             (content . "light dark"))))
 
-;; The three text styles a template reaches for, all keyed to the light
-;; palette (the head's dark override re-points the classes at the dark one).
+;; The text styles a template reaches for.  Each one is the `mail-styles'
+;; entry of the same name read in the light palette -- the inline reading --
+;; so a template names a style rather than a colour, and the dark override the
+;; head carries is generated from the same entry rather than kept beside it.
 (define (mail-heading-style)
-  (mk-style `(("color" unquote
-               (color-of mail-light
-                         'heading))
-              ("font-family" unquote mail-sans-stack)
-              ("font-size" . "23px")
-              ("font-weight" . "600")
-              ("line-height" . "1.35")
-              ("margin" . "0 0 6px"))))
+  (style-of 'heading))
 
 (define (mail-text-style)
-  (mk-style `(("color" unquote
-               (color-of mail-light
-                         'ink))
-              ("font-family" unquote mail-sans-stack)
-              ("font-size" . "16px")
-              ("line-height" . "1.65")
-              ("margin" . "14px 0"))))
+  (style-of 'text))
 
 (define (mail-muted-style)
-  (mk-style `(("color" unquote
-               (color-of mail-light
-                         'muted))
-              ("font-family" unquote mail-sans-stack)
-              ("font-size" . "13px")
-              ("line-height" . "1.55")
-              ("margin" . "0 0 6px"))))
+  (style-of 'muted))
 
 (define (mail-mono-style)
-  (mk-style `(("color" unquote
-               (color-of mail-light
-                         'heading))
-              ("font-family" unquote mail-mono-stack)
-              ("font-size" . "13px")
-              ("word-break" . "break-all"))))
+  (style-of 'mono))
 
 (define* (mail-head #:key title)
   `(head ,meta-charset
@@ -143,9 +124,7 @@
 ;; client for a blur it will not give.
 (define (mail-accent)
   `(div (@ (class . "pw-accent")
-           (style ,(mk-style `(("height" . "6px") ("line-height" . "0")
-                               ("font-size" . "0")
-                               ("background-image" . "linear-gradient(90deg,#a7c080,#e67e80,#dbbc7f,#7fbbb3)")))))
+           (style ,(style-of 'accent)))
         ,no-content))
 
 ;; The panel: what every message sits in.  `backdrop-filter' is declared for
@@ -160,22 +139,7 @@
              (cellspacing . "0")
              (border . "0")
              (class . "pw-panel")
-             (style ,(mk-style `(("width" . "100%") ("max-width" . "600px")
-                                 ("border-collapse" . "separate")
-                                 ("background-color" unquote
-                                  (color-of mail-light
-                                            'panel))
-                                 ("border" unquote
-                                  (format #f "1px solid ~a"
-                                          (color-of mail-light
-                                                    'panel-border)))
-                                 ("border-radius" . "24px")
-                                 ("box-shadow" unquote
-                                  (color-of mail-light
-                                            'panel-shadow))
-                                 ("backdrop-filter" . "blur(16px)")
-                                 ("-webkit-backdrop-filter" . "blur(16px)")
-                                 ("overflow" . "hidden")))))
+             (style ,(style-of 'panel)))
           (tr (td (@ (style "padding:0;"))
                   ,@(if accent
                         (list (mail-accent))
@@ -190,48 +154,22 @@
              (border . "0")
              (style "border-collapse:separate;margin:24px 0;"))
           (tr (td (@ (class . "pw-button")
-                     (style ,(mk-style `(("background-color" unquote
-                                          (color-of mail-light
-                                                    'accent))
-                                         ("border-radius" . "999px")
-                                         ("padding" . "13px 26px")))))
+                     (style ,(style-of 'button)))
                   (a (@ (href ,href)
-                        (style ,(mk-style `(("color" unquote
-                                             (color-of mail-light
-                                                       'accent-ink))
-                                            ("font-family" unquote
-                                             mail-sans-stack)
-                                            ("font-size" . "16px")
-                                            ("font-weight" . "600")
-                                            ("text-decoration" . "none")
-                                            ("display" . "inline-block")))))
+                        (class . "pw-button-ink")
+                        (style ,(style-of 'button-ink)))
                      ,label)))))
 
 (define (mail-rule)
   `(div (@ (class . "pw-rule")
-           (style ,(mk-style `(("border-top" unquote
-                                (format #f "1px solid ~a"
-                                        (color-of mail-light
-                                                  'rule)))
-                               ("margin" . "24px 0")
-                               ("font-size" . "0")
-                               ("line-height" . "0")))))
+           (style ,(style-of 'rule)))
         ,no-content))
 
 ;; A second, lighter pane inside the first, for the few facts a message wants
 ;; set apart -- the ticket it is about, the account a reset concerns.
 (define* (mail-inner content)
   `(div (@ (class . "pw-inner")
-           (style ,(mk-style `(("background-color" unquote
-                                (color-of mail-light
-                                          'inner))
-                               ("border" unquote
-                                (format #f "1px solid ~a"
-                                        (color-of mail-light
-                                                  'inner-border)))
-                               ("border-radius" . "16px")
-                               ("padding" . "18px 20px")
-                               ("margin" . "22px 0")))))
+           (style ,(style-of 'inner)))
         ,@(as-children content)))
 
 ;; A two-column list of label/value facts, set in a small pane: what a reset
@@ -242,24 +180,11 @@
         (value (cdr row)))
     (and value
          (not (equal? value ""))
-         `(tr (td (@ (style ,(mk-style `(("color" unquote
-                                          (color-of mail-light
-                                                    'muted))
-                                         ("font-family" unquote
-                                          mail-sans-stack)
-                                         ("font-size" . "13px")
-                                         ("padding" . "4px 12px 4px 0")
-                                         ("vertical-align" . "top")))))
+         `(tr (td (@ (class . "pw-fact-label")
+                     (style ,(style-of 'fact-label)))
                   ,label)
-              (td (@ (style ,(mk-style `(("color" unquote
-                                          (color-of mail-light
-                                                    'heading))
-                                         ("font-family" unquote
-                                          mail-sans-stack)
-                                         ("font-size" . "14px")
-                                         ("padding" . "4px 0")
-                                         ("text-align" . "right")
-                                         ("vertical-align" . "top")))))
+              (td (@ (class . "pw-fact-value")
+                     (style ,(style-of 'fact-value)))
                   ,value)))))
 
 (define (mail-facts rows)
@@ -282,10 +207,8 @@
 
 (define* (mail-link #:key href label)
   `(a (@ (href ,href)
-         (style ,(mk-style `(("color" unquote
-                              (color-of mail-light
-                                        'heading))
-                             ("text-decoration" . "underline")))))
+         (class . "pw-link")
+         (style ,(style-of 'link)))
       ,label))
 
 (define-public mail-footer
@@ -304,10 +227,8 @@
                   (p (@ (class . "pw-muted")
                         (style ,(mail-muted-style)))
                      (a (@ (href . "https://codeberg.org/jjba23/pingwing")
-                           (style ,(mk-style `(("color" unquote
-                                                (color-of mail-light
-                                                          'muted))
-                                               ("text-decoration" . "underline")))))
+                           (class . "pw-footer-link")
+                           (style ,(style-of 'footer-link)))
                         ,(gettext "🔗 pingwing's source code on Codeberg")))))))
 
 (define* (mail-document #:key title content)
@@ -317,21 +238,7 @@ and gets back a document that looks like the rest of them."
   `((html (@ (lang . "en"))
           ,(mail-head #:title title)
           (body (@ (class . "pw-body")
-                   (style ,(mk-style `(("margin" . "0") ("padding" . "0")
-                                       ("width" . "100%")
-                                       ("background-color" unquote
-                                        (color-of mail-light
-                                                  'bg))
-                                       ("background-image" unquote
-                                        (color-of mail-light
-                                                  'bg-gradient))
-                                       ("font-family" unquote mail-sans-stack)
-                                       ("font-size" . "16px")
-                                       ("line-height" . "1.6")
-                                       ("color" unquote
-                                        (color-of mail-light
-                                                  'ink))
-                                       ("-webkit-font-smoothing" . "antialiased")))))
+                   (style ,(style-of 'body)))
                 (table (@ (role . "presentation")
                           (width . "100%")
                           (cellpadding . "0")
@@ -351,3 +258,29 @@ and gets back a document that looks like the rest of them."
                                                              ("margin" . "0 auto")))))
                                       (tr (td ,(mail-panel content)))
                                       (tr (td ,mail-footer))))))))))
+
+;;; ====== the document a template hands back ======
+
+;; A message's HTML part is a whole document and says so.  The doctype is not
+;; decoration: told nothing, a parser reads the message as legacy HTML -- quirks
+;; mode -- where a mail client's own widths, its line box and its table sizing
+;; are the 1990s ones, and a message laid out with a fixed 600px panel and
+;; `border-collapse: separate' is exactly the kind of document that is affected.
+;;
+;; It is written here, once, and every template comes through here to be
+;; serialised, so a new template cannot forget it -- and the assembler that
+;; wraps the part in MIME does not write one of its own, because a second
+;; doctype is not a document at all.
+(define mail-doctype
+  "<!DOCTYPE html>\n")
+
+(define* (mail-document->string tree)
+  "TREE as the whole HTML document a message's HTML part holds.
+
+The doctype first, then the serialised tree.  The line ending is left as a
+newline: the part is quoted-printable encoded on the way out, and that encoder
+normalises every line ending to CRLF, which is the only place the wire's line
+ending belongs."
+  (with-output-to-string (lambda ()
+                           (display mail-doctype)
+                           (sxml->xml tree))))
