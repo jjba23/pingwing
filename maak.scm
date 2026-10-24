@@ -67,7 +67,7 @@
 
 (define (default)
   "Default task to be run, list available tasks."
-  ($ '("maak --list")))
+  (list-tasks))
 
 (define (build-manual)
   "Render the project's manual -- the README -- as a single HTML page."
@@ -89,7 +89,9 @@ safe -- the migrations already recorded are skipped."
 
 (define (fmt)
   "Format Scheme source code files according to the Guix style guide."
-  ($ '("find . -maxdepth 8 -name '*.scm'" "-type f -exec guix style -f {} \\;")))
+  (run (list "find" "." "-maxdepth" "8" "-name" "*.scm" "-type" "f"
+             "-exec" "guix" "style" "-f" "{}" ";")
+       #:verbose? #t))
 
 (define (hot-reload)
   "Hot-reloading developer's setup."
@@ -115,7 +117,7 @@ safe -- the migrations already recorded are skipped."
 (define (kill-server)
   "Kill any running HTTP server in the same port."
   ($ (list (~ "fuser -k ~a/tcp || true" http-port)))
-  ($ '("sleep 1")))
+  (run (list "sleep" "1")))
 
 (define (server)
   "Target to start the pingwing server with the default configuration."
