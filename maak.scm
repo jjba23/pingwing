@@ -44,26 +44,16 @@
 (define migrations-dir
   "resources/migrations/sqlite")
 
-;; Quote TEXT the way a POSIX shell reads it back as TEXT: wrapped in single
-;; quotes, where every character is literal, with a single quote of its own
-;; closed, escaped and reopened.  A command that has to set a variable or pass
-;; a script of its own -- the benchmark run below -- needs this, since a shell
-;; is handed one string and would otherwise read the spaces as argument
-;; boundaries.
-(define (shell-quoted text)
-  (string-append "'"
-                 (apply string-append
-                        (map (lambda (c)
-                               (if (eqv? c #\') "'\\''"
-                                   (string c)))
-                             (string->list text))) "'"))
-
 ;; ====== Maak tasks ======
+;;
+;; A manifest shell joins the parts it is handed into one shell line, so each
+;; word is its own part and a part with spaces in it -- a script passed to `-c'
+;; -- keeps the quoting a shell needs to read it back as one word.
 
 (define (repl)
   "Development REPL."
-  (time-machine-manifest-shell '("guile -L ./lib -L ."
-                                 "-c '((@ (ares server) run-nrepl-server))'")))
+  (time-machine-manifest-shell (list "guile" "-L" "./lib" "-L" "."
+                                     "-c" "'((@ (ares server) run-nrepl-server))'")))
 
 (define (default)
   "Default task to be run, list available tasks."
@@ -71,8 +61,8 @@
 
 (define (build-manual)
   "Render the project's manual -- the README -- as a single HTML page."
-  (time-machine-manifest-shell (list (~ "emacs -Q --batch --eval '~s'"
-                                        emacs-lisp-manual-publish-cmd))
+  (time-machine-manifest-shell (list "emacs" "-Q" "--batch" "--eval"
+                                     (~ "'~s'" emacs-lisp-manual-publish-cmd))
                                #:verbose? #t))
 
 (define (migrate)
@@ -82,9 +72,10 @@ Mutastructura does the work: it keeps its own ledger of which migration has
 run, applies the rest oldest first, and runs each one in a transaction, so a
 migration that fails leaves the database as it was.  Running this again is
 safe -- the migrations already recorded are skipped."
-  (time-machine-manifest-shell (list (~
-                                      "mutastructura --database sqlite3 --connection ~a --migrations ~a"
-                                      pingwing-db migrations-dir))
+  (time-machine-manifest-shell (list "mutastructura"
+                                     "--database" "sqlite3"
+                                     "--connection" pingwing-db
+                                     "--migrations" migrations-dir)
                                #:verbose? #t))
 
 (define (fmt)
@@ -97,14 +88,15 @@ safe -- the migrations already recorded are skipped."
   "Hot-reloading developer's setup."
   (time-machine-manifest-shell (list "watchexec"
                                      "--clear"
-                                     (~ "--exts ~a"
-                                        (string-join (map symbol->string
-                                                      hot-reload-file-types)
-                                                     ","))
+                                     "--exts"
+                                     (string-join (map symbol->string
+                                                       hot-reload-file-types)
+                                                  ",")
                                      "--on-busy-update=restart"
-                                     "--shell bash"
-                                     "--watch . --"
-                                     "maak server")))
+                                     "--shell" "bash"
+                                     "--watch" "."
+                                     "--"
+                                     "maak" "server")))
 
 (define (hr)
   "Alias to hot-reloading."
@@ -116,18 +108,23 @@ safe -- the migrations already recorded are skipped."
 
 (define (kill-server)
   "Kill any running HTTP server in the same port."
-  ($ (list (~ "fuser -k ~a/tcp || true" http-port)))
+  ;; `fuser' exits non-zero when nothing is listening on the port, which is the
+  ;; ordinary case for a stop with nothing to stop: the failure is the answer
+  ;; rather than an error, so it is allowed and ignored.
+  (run (list "fuser" "-k" (~ "~a/tcp" http-port))
+       #:allow-failure? #t)
   (run (list "sleep" "1")))
 
 (define (server)
   "Target to start the pingwing server with the default configuration."
   (kill-server)
-  (time-machine-manifest-shell '("art work")))
+  (time-machine-manifest-shell (list "art" "work")))
 
 (define (production-server)
   "Target to start the pingwing server with the production configuration."
   (kill-server)
-  (time-machine-manifest-shell '("art work -c conf/production.conf")))
+  (time-machine-manifest-shell (list "art" "work"
+                                     "-c" "conf/production.conf")))
 
 (define (init-db)
   "Initialize a new database: the file, WAL mode, and the schema.
@@ -139,13 +136,15 @@ whatever file is already there, which is why a deployment that has data runs
   (delete-file-recursively pingwing-db)
   (delete-file-recursively (~ "~a-shm" pingwing-db))
   (delete-file-recursively (~ "~a-wal" pingwing-db))
-  (time-machine-manifest-shell (~ "sqlite3 ~a 'PRAGMA journal_mode=WAL;'"
-                                  pingwing-db))
+  (time-machine-manifest-shell (list "sqlite3" pingwing-db
+                                     "'PRAGMA journal_mode=WAL;'"))
   (migrate))
 
 (define (import-production-env)
   "Import production env's database to local workspace via SSH/SCP"
-  ($ '("scp wolk-jjba:/etc/byggsteg/job-clone/pingwing/trunk/env.scm .")))
+  (run (list "scp"
+             "wolk-jjba:/etc/byggsteg/job-clone/pingwing/trunk/env.scm"
+             ".")))
 
 (define (test)
   "Run the project's test suite with Veritas.
@@ -154,8 +153,9 @@ The runner scans ./test for suites and loads each spec as a module, which is
 why the specs under test/veritas/unit are named `(veritas unit ...)': that is
 the name the runner derives from where they sit, and `-L ./test' is what lets
 Guile resolve it."
-  (time-machine-manifest-shell (list "guile -L ./lib -L . -L ./test"
-                                "-c '(begin (use-modules (veritas runner)) (run-tests))'")
+  (time-machine-manifest-shell (list "guile" "-L" "./lib" "-L" "."
+                                     "-L" "./test"
+                                     "-c" "'(begin (use-modules (veritas runner)) (run-tests))'")
                                #:verbose? #t))
 
 (define (test-benchmark)
@@ -165,11 +165,13 @@ The benchmarks live under test/veritas/benchmark, the second category the same
 runner understands; naming it here is what makes them run, since an ordinary
 `maak test' looks for unit specs only.
 
-The run is handed to `sh -c' rather than passed as arguments: the type of run
-is set through the environment, and a Guix shell runs the program it is given
-without a shell in between, so `VERITAS_TEST_TYPE=benchmark' would be read as
-the name of a program."
-  (time-machine-manifest-shell (list "sh -c"
-                                     (shell-quoted
-                                      "VERITAS_TEST_TYPE=benchmark guile -L ./lib -L . -L ./test -c '(begin (use-modules (veritas runner)) (run-tests))'"))
+The type of run is set through the environment rather than as a `VAR=value'
+word in the command: a Guix shell runs the program it is given without a shell
+in between, so an assignment written as a word would be read as the name of a
+program.  `#:env' passes it through `env', which reaches the guile that runs
+the benchmarks."
+  (time-machine-manifest-shell (list "guile" "-L" "./lib" "-L" "."
+                                     "-L" "./test"
+                                     "-c" "'(begin (use-modules (veritas runner)) (run-tests))'")
+                               #:env '("VERITAS_TEST_TYPE=benchmark")
                                #:verbose? #t))
