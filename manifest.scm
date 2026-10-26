@@ -136,7 +136,7 @@ user sessions on the web or authenticating API calls.")
 (define-public guile-scriba
   (package
     (name "guile-scriba")
-    (version "0.3.3")
+    (version "0.4.5")
     (source
      (origin
        (method git-fetch)
@@ -145,7 +145,7 @@ user sessions on the web or authenticating API calls.")
              (commit (string-append "v" version))))
        (file-name (git-file-name name version))
        (sha256
-        (base32 "0b05a74k2gcz5whn5czkjq28lp1m4b88ww16d8y7q3708ncdwq23"))))
+        (base32 "06b6dqp88n10x495jqazzdb87p2968p3wqccdq2lk2291iyplg73"))))
     (build-system guile-build-system)
     (arguments
      (list
