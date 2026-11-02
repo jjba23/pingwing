@@ -668,8 +668,8 @@ written inline, on the element that wears it.*  The ~<head>~ carries only the tw
 things that genuinely cannot be said inline -- the ~@font-face~ declarations and
 a dark-mode override -- as a courtesy for the clients that read them.  A message
 that loses the whole ~<head>~ still reads as the same message; it just falls
-back to Lucida or the system sans and to the light palette, which the rest of
-the declarations are already chosen to match.
+back to the system sans and to the light palette, which the rest of the
+declarations are already chosen to match.
 
 The look is the hygguile one, as much of it as a mail can hold: a translucent
 panel over a soft gradient, a hairline border, a long low shadow, and a hairline
@@ -679,9 +679,10 @@ paint, so the glass is faked the way it has always been faked where blur is
 unavailable: transparency plus a shadow.  ~backdrop-filter~ is still declared,
 for the clients that would honour it.
 
-Typography is Lucida Sans (with Lucida Sans Typewriter for the monospaced bits)
-over the framework's own ~@font-face~ sources, and Intel One Mono from Google
-Fonts, with system fallbacks chosen to sit on the same footing.  The colours are
+Typography is Work Sans (with JuliaMono for the monospaced bits), both libre
+(SIL Open Font License 1.1) and both declared from the project's own asset host
+rather than asked of a font service, with system fallbacks chosen to sit on the
+same footing.  The colours are
 the everforest palette, so a pingwing message reads as a member of the same
 family as the sites that send it.  All of the shared furniture -- the panel, the
 button, the fact list, the footer, the two text styles -- lives in
@@ -1268,9 +1269,7 @@ While tools like Large Language Models (LLMs) and interactive chatbots can be
 beneficial for reviewing, refactoring small functions, or acting as a sounding
 board, they should be used with moderation.
 
-We require a human in the loop for all contributions.  The use of autonomous AI
-agents to automatically generate and submit pull requests to this project is
-strictly prohibited.
+We require a human in the loop for all contributions.
 
 ** Code of conduct
 :PROPERTIES:
@@ -1310,22 +1309,18 @@ https://www.gnu.org/licenses/fdl-1.3.html
 :CUSTOM_ID: on-the-fonts-a-message-asks-for
 :END:
 
-Lucida fonts are proprietary typefaces originally developed by Bigelow & Holmes.
-They remain a long-time favorite for many people and are very legible in many
-situations and hardware/software.  While they are bundled pre-installed on many
-operating systems and platforms, they remain proprietary fonts.
+A message is set in two libre families, both under the SIL Open Font License
+1.1: *Work Sans* for its prose and *JuliaMono* for the monospaced runs, a code
+sample or a table of figures.
 
-A pingwing message does not ship a font: it names Lucida in its styles and asks
-for it from the project's own asset host, and a client that does not have it --
-or refuses to fetch it, which is most of them -- reads the message in its own
-system sans.  The declarations are a courtesy to the clients that honour them,
-never a requirement for reading a message.
+A pingwing message does not ship a font: it names those families in its styles
+and declares the faces from the project's own asset host -- never from a font
+service, so a message asks no third party for its type -- and a client that does
+not have them, or refuses to fetch them, which is most of them, reads the
+message in its own system sans and monospace.  The declarations are a courtesy
+to the clients that honour them, never a requirement for reading a message.
 
-You may use these font files under principles of fair use or for local
-development and non-commercial purposes, provided it is not for profit and used
-without securing a proper commercial license where required by law. Users and
-contributors are solely responsible for ensuring their usage complies with
-applicable software licensing terms and intellectual property rights.
+No proprietary font is bundled, served or named anywhere in pingwing.
 
 ------------------
 

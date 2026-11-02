@@ -22,8 +22,8 @@
 ;;; wears it, and the <head> only carries the two things that cannot be said
 ;;; inline -- the @font-face declarations and a dark-mode override -- as a
 ;;; courtesy for the clients that do read them.  A message that loses the whole
-;;; <head> still reads as the same message; it just falls back to Lucida or the
-;;; system sans and to the light palette, which is what the rest of these
+;;; <head> still reads as the same message; it just falls back to the system
+;;; sans and to the light palette, which is what the rest of these
 ;;; declarations are already chosen to match.
 ;;;
 ;;; The dark override is the one place a colour has to be said twice -- the
@@ -177,14 +177,14 @@
 
 ;; The type faces the happy path asks for.  The first name in each stack is
 ;; the webfont the head style declares; the rest are what a mail client that
-;; refused the font falls back to, chosen to sit on the same footing -- Lucida
-;; Sans on the desktop, and the system sans elsewhere.  The monospaced stack
-;; is the same bargain with Intel One Mono and Lucida Sans Typewriter.
+;; refused the font falls back to, chosen to sit on the same footing -- the
+;; reader's own sans, and a monospace that keeps its columns.  Both families are
+;; libre (SIL Open Font License 1.1) and served from one host of ours.
 (define mail-sans-stack
-  "'Lucida Sans','Lucida Grande','Lucida Sans Unicode','DejaVu Sans',Verdana,'Segoe UI',Roboto,sans-serif")
+  "'Work Sans','Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans',sans-serif")
 
 (define mail-mono-stack
-  "'Intel One Mono','Lucida Sans Typewriter','DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,'Courier New',monospace")
+  "'JuliaMono','DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,'Courier New',monospace")
 
 ;;; ====== every style a message wears, in one table ======
 
@@ -320,27 +320,22 @@ overrides of its dark reading."
   (mk-style (assq-ref mail-styles name)
             #:scheme scheme))
 
-;; The @font-face declarations: the Lucida faces the hygguile sites serve from
-;; jointhefreeworld's own asset host, plus Intel One Mono from Google Fonts.
-;; They are the two families the inline styles ask for first; a client that
-;; loads neither simply reaches past them to its own fonts.
+;; The @font-face declarations: Work Sans for the prose and JuliaMono for the
+;; monospaced runs, the two families the inline styles ask for first.  Both are
+;; libre (SIL Open Font License 1.1) and both are served from the project's own
+;; asset host rather than from a font service, so a message asks no third party
+;; for its type; a client that loads neither simply reaches past them to its own
+;; fonts.  Work Sans is a variable font, so one file per style carries the whole
+;; weight axis; JuliaMono ships static weights, hence the pair split at 600.
 (define mail-font-faces
   (string-append
-   "@import url('https://fonts.googleapis.com/css2?family=Intel+One+Mono:ital,wght@0,300..700;1,300..700&display=swap');
+   "@font-face{font-family:'Work Sans';font-style:normal;font-weight:100 900;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/work-sans-normal-latin.woff2') format('woff2');}
 "
-   "@font-face{font-family:'Lucida Sans';font-style:normal;font-weight:400;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LSANS.woff') format('woff');}
+   "@font-face{font-family:'Work Sans';font-style:italic;font-weight:100 900;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/work-sans-italic-latin.woff2') format('woff2');}
 "
-   "@font-face{font-family:'Lucida Sans';font-style:italic;font-weight:400;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LSANSI.woff') format('woff');}
+   "@font-face{font-family:'JuliaMono';font-style:normal;font-weight:300 500;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/juliamono-normal-latin.woff2') format('woff2');}
 "
-   "@font-face{font-family:'Lucida Sans';font-style:normal;font-weight:600;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LSANSD.woff') format('woff');}
-"
-   "@font-face{font-family:'Lucida Sans';font-style:italic;font-weight:600;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LSANSDI.woff') format('woff');}
-"
-   "@font-face{font-family:'Lucida Sans Typewriter';font-style:normal;font-weight:400;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LTYPE.woff') format('woff');}
-"
-   "@font-face{font-family:'Lucida Sans Typewriter';font-style:oblique;font-weight:400;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LTYPEO.woff') format('woff');}
-"
-   "@font-face{font-family:'Lucida Sans Typewriter';font-style:normal;font-weight:700;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/LTYPEB.woff') format('woff');}
+   "@font-face{font-family:'JuliaMono';font-style:normal;font-weight:600 900;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/juliamono-bold-latin.woff2') format('woff2');}
 "))
 
 ;;; ====== the dark override, generated from that table ======

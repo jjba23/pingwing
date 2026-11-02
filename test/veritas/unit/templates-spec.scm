@@ -546,12 +546,12 @@ the pattern only matches a `color' that ends a word."
   (let ((head (mail-head-style)))
     (suite "the fonts and the glass"
            (test "the faces are declared"
-                 (assert-contains #:name "Lucida is declared"
+                 (assert-contains #:name "Work Sans is declared"
                                   #:expect head
-                                  #:got "Lucida Sans")
-                 (assert-contains #:name "Intel One Mono is asked for"
+                                  #:got "Work Sans")
+                 (assert-contains #:name "JuliaMono is declared"
                                   #:expect head
-                                  #:got "Intel+One+Mono"))
+                                  #:got "JuliaMono"))
            (test "both colour schemes are offered"
                  (assert-contains #:name "a dark theme is offered"
                                   #:expect head
