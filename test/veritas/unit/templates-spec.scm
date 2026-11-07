@@ -163,8 +163,12 @@
                                                     #:subject "Hi"
                                                     #:body "plain body"
                                                     #:body-html ticket)))
-                   (assert-true (string-contains message
-                                                 "<!DOCTYPE html>\r\n<html")
+                   ;; `string-contains' answers with the index the text was
+                   ;; found at, and `assert-true' asks for `#t' itself, so the
+                   ;; index is turned into the answer the assert is asking for.
+                   (assert-true (and (string-contains message
+                                                     "<!DOCTYPE html>\r\n<html")
+                                     #t)
                     #:name "the doctype opens the HTML part of the message")
                    (assert-equal #:name
                                  "the message carries exactly one doctype"
