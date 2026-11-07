@@ -1,0 +1,71 @@
+#+title: ChangeLog for PingWing
+#+author: Josep Bigorra
+#+email: jjbigorra@gmail.com
+#+language: en
+#+options: toc:nil
+
+[[https://jointhefreeworld.org/ggg/dist/scheme-guile.svg]] [[https://jointhefreeworld.org/ggg/dist/gnu-guix.svg]] [[https://jointhefreeworld.org/ggg/dist/maak.svg]] [[https://jointhefreeworld.org/ggg/dist/gnu-artanis.svg]]
+[[https://jointhefreeworld.org/ggg/dist/license-mit.svg]] [[https://img.shields.io/badge/docs%20license-CC%20BY%204.0-2ea44f.svg]] [[https://jointhefreeworld.org/ggg/dist/jointhefreeworld-org.svg]] [[https://img.shields.io/badge/CI-Byggsteg%20%7C%20GitHub-2ea44f.svg]]
+
+/the free and open Lisp-powered notification nexus/
+
+What changed, newest first, one section per release.  The manual is
+[[file:README.org][README.org]]: this file says what moved and when, and the manual says how it
+works.
+
+------------------
+
+* v0.6.0 -- 2026-11-07
+
+A release about the terms, the pipeline and the type -- nothing about what
+pingwing does with a task.
+
+** MIT
+
+pingwing is now licensed under the [[https://opensource.org/license/mit][MIT License]], where it was AGPL-3.0-or-later.
+The full text is =LICENSE=, and =COPYING= is gone with the old terms.  Every
+source file, config and migration now opens with the same four lines naming the
+project, its =SPDX-License-Identifier= and the copyright holder, so a single file
+copied out of this repository travels with its terms -- the fourteen-line AGPL
+notice it replaces is in the licence file, where it belongs.  The documentation,
+this file and the manual included, is [[https://creativecommons.org/licenses/by/4.0/][CC BY 4.0]].
+
+For anyone who needs to know what the change costs them: the network-use
+condition of the AGPL no longer applies from this version on, so an instance of
+pingwing is now something you may run without offering its source, and nothing
+else changed.  The terms of the versions up to and including =v0.5.0= are the
+ones those versions were published under.
+
+** The pipeline is GitHub Actions
+
+A push to =trunk= is now collected by GitHub Actions (=.github/workflows/ci.yml=)
+instead of Woodpecker (=.woodpecker/byggsteg.yaml=, removed), which asks the
+jointhefreeworld [[https://codeberg.org/jjba23/byggsteg][Byggsteg]] service for a
+job and follows its log to a green or a red build.  The workflow calls
+[[https://github.com/jjba23/byggsteg-github][byggsteg-github]]'s reusable workflow
+rather than carrying the steps here, and the job is =maak-test= and then
+=pull-and-restart= on the =pingwing-daemon=: the suite is a gate now, where
+before the push went straight to the running instance.  =CODEOWNERS= names the
+maintainer, and =*.scm= is declared as Scheme so the repository is counted as one.
+
+** Source Serif 4 is declared
+
+The mail's type is now the house trio: *Work Sans* for the sans, *Source Serif 4*
+for the serif and *JuliaMono* for the monospaced runs.  All three are libre (SIL
+Open Font License 1.1) and declared from the project's own asset host, the
+variable-weight files of the first two and the static pair of the third.  The
+serif is available and declared, not worn: no element takes it yet, so every
+message renders exactly as it did in =v0.5.0=, and =mail-serif-stack= is exported
+for the style that will.
+
+** Notes
+
+Nothing in the API changed.  Every task type, template, setting and environment
+variable of =v0.5.0= is the one this version takes, so an integrator has nothing
+to do beyond deciding what the new terms mean for them.
+
+The suite is not green: two assertions in =test/veritas/unit/templates-spec.scm=
+fail -- the doctype one ("the message a client receives opens with it", a
+=string-contains= answered with an index where a =#t= was expected) and a count
+of 5 where 4 was expected -- and they failed before this release too.  They are
+recorded rather than fixed here, which is why they are named.

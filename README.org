@@ -31,6 +31,7 @@ and it is a key component of the
 
 - 💾 *Read the source (and send PR/issues/patches):* [[https://codeberg.org/jjba23/pingwing][codeberg.org/jjba23/pingwing]]
 - 📖 *Read this document rendered as HTML:* ~maak build-manual~ renders it to ~README.html~ next to it
+- 📋 *See what changed, and when:* [[file:CHANGELOG.org][CHANGELOG.org]]
 - 🗺️ *Follow what is next:* [[https://lucidplan.jointhefreeworld.org/tickets/pingwing][the PingWing board]]
 - 🧩 *See what it serves:* [[https://codeberg.org/jjba23/lucidplan][lucidplan]], [[https://codeberg.org/jjba23/byggsteg][byggsteg]] and [[https://codeberg.org/jjba23/wikimusic][wikimusic]] are the neighbours that send through it
 
