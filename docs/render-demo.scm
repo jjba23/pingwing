@@ -1,3 +1,8 @@
+;; pingwing - the free and open Lisp-powered notification nexus
+;;
+;; SPDX-License-Identifier: MIT
+;; Copyright © Josep Bigorra <jjbigorra@gmail.com>
+
 ;;; pingwing -- render the frames of the README's showcase.
 ;;;
 ;;; This is a build-time helper, not part of the application: it calls the very

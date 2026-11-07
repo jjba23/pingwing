@@ -1,4 +1,9 @@
 #!/bin/sh
+# pingwing - the free and open Lisp-powered notification nexus
+#
+# SPDX-License-Identifier: MIT
+# Copyright © Josep Bigorra <jjbigorra@gmail.com>
+
 # pingwing -- redraw the README's showcase from the templates themselves.
 #
 #   guix shell -m manifest.scm -- ./docs/make-demo-gif.sh

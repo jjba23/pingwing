@@ -7,7 +7,7 @@
 #+HTML_HEAD: <link rel="stylesheet" type="text/css" href="https://jointhefreeworld.org/static/css/jointhefreeworld.css" />
 
 [[https://jointhefreeworld.org/ggg/dist/scheme-guile.svg]] [[https://jointhefreeworld.org/ggg/dist/gnu-guix.svg]] [[https://jointhefreeworld.org/ggg/dist/maak.svg]] [[https://jointhefreeworld.org/ggg/dist/gnu-artanis.svg]]
-[[https://jointhefreeworld.org/ggg/dist/license-agpl3+.svg]] [[https://jointhefreeworld.org/ggg/dist/license-fdl13+.svg]] [[https://jointhefreeworld.org/ggg/dist/jointhefreeworld-org.svg]] [[https://img.shields.io/badge/CI-Byggsteg%20%7C%20Woodpecker-2ea44f.svg]]
+[[https://jointhefreeworld.org/ggg/dist/license-mit.svg]] [[https://img.shields.io/badge/docs%20license-CC%20BY%204.0-2ea44f.svg]] [[https://jointhefreeworld.org/ggg/dist/jointhefreeworld-org.svg]] [[https://img.shields.io/badge/CI-Byggsteg%20%7C%20Woodpecker-2ea44f.svg]]
 
 #+attr_html: :width 160 :alt PingWing logo
 [[file:logo.svg]]
@@ -21,8 +21,8 @@ conversation, the retries and the record of what happened.  It is the part of a
 platform that nobody wants to write five times; write it once, in Scheme, and
 point every service at it.
 
-It is free software (free as in freedom), licensed under the GNU Affero General
-Public License v3 or newer, and it is a key component of the
+It is free and open software, licensed under the [[https://opensource.org/license/mit][MIT License]],
+and it is a key component of the
 [[https://jointhefreeworld.org/][jointhefreeworld]] ecosystem.
 
 #+name: pingwing-demo
@@ -1296,16 +1296,14 @@ respect is essential to creating excellent free software.
 :CUSTOM_ID: licensing
 :END:
 
-pingwing and all of its source code are free software, licensed under the GNU
-Affero General Public License v3 (or newer at your convenience).
-
-https://www.gnu.org/licenses/agpl-3.0.html
+This project, and Git repository, and all of its source code are free and open
+software, licensed under the [[https://opensource.org/license/mit][MIT License]].  The
+full text is in the =LICENSE= file, and every source file says the same in its own
+header, as an =SPDX-License-Identifier: MIT= line.
 
 The documentation and examples, including this document, which are provided with
-pingwing, are all licensed under the GNU Free Documentation License v1.3 (or
-newer at your convenience).
-
-https://www.gnu.org/licenses/fdl-1.3.html
+pingwing, are all licensed under the [[https://creativecommons.org/licenses/by/4.0/][CC BY 4.0 (Creative Commons Attribution)]]
+license.
 
 ** On the fonts a message asks for
 :PROPERTIES:

@@ -1,11 +1,7 @@
 -- pingwing - the free and open Lisp-powered notification nexus
-
+--
+-- SPDX-License-Identifier: MIT
 -- Copyright © Josep Bigorra <jjbigorra@gmail.com>
-
--- pingwing is free software: you can redistribute it and/or modify
--- it under the terms of the GNU Affero General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
 
 -- Record why a task did not go out.
 --

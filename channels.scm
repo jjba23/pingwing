@@ -1,3 +1,8 @@
+;; pingwing - the free and open Lisp-powered notification nexus
+;;
+;; SPDX-License-Identifier: MIT
+;; Copyright © Josep Bigorra <jjbigorra@gmail.com>
+
 (list (channel
         (name 'guix)
         (url "https://codeberg.org/guix/guix.git")

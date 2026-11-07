@@ -1,5 +1,10 @@
 ;;; pingwing-http-util.el --- P4 HTTP calls helper -*- lexical-binding: t -*-
 
+;; pingwing - the free and open Lisp-powered notification nexus
+;;
+;; SPDX-License-Identifier: MIT
+;; Copyright © Josep Bigorra <jjbigorra@gmail.com>
+
 ;; Package-Requires: ((request "0.3.3"))
 
 ;; Local Variables:

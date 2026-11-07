@@ -1,5 +1,10 @@
 ;; -*- mode: Scheme;-*-
 
+;; pingwing - the free and open Lisp-powered notification nexus
+;;
+;; SPDX-License-Identifier: MIT
+;; Copyright © Josep Bigorra <jjbigorra@gmail.com>
+
 ;; This an Artanis ENTRY file, don't remove it!
 
 (add-to-load-path (string-append (current-toplevel) "/lib"))
