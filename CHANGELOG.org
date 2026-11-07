@@ -15,6 +15,31 @@ works.
 
 ------------------
 
+* v0.6.1 -- 2026-11-07
+
+The picture in the manual is redrawn.
+
+A pingwing message has named Work Sans and JuliaMono in its styles since before
+=v0.6.0=, but the GIF in the manual was photographed on 2026-10-15, before that
+change, so it showed the fallback stack -- the reader was shown type the mails
+no longer ask for.  It is drawn again by =docs/make-demo-gif.sh= from the
+templates themselves: the same three messages, the same three light frames and
+the same dark pair, now set in Work Sans for the prose and JuliaMono for the
+monospaced runs.  Set in the real faces, the type runs a touch wider than the
+fallback did, so a sentence here and there wraps a word earlier; the frames,
+their order, their delays and the pipeline are unchanged -- remote fonts are
+still refused, so the picture shows what a client that refuses a web font sees,
+with the two families resolved from the machine that drew it.
+
+*Source Serif 4* is declared in =v0.6.0= and still unworn, so it does not appear:
+the style that takes it will redraw this picture again.
+
+Nothing else changed -- no source, no template, no setting, no schema.  The
+suite is red for the two =templates-spec= assertions =v0.6.0= named, and they are
+named there rather than fixed here.
+
+------------------
+
 * v0.6.0 -- 2026-11-07
 
 A release about the terms, the pipeline and the type -- nothing about what
