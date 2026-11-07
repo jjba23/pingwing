@@ -682,10 +682,10 @@ paint, so the glass is faked the way it has always been faked where blur is
 unavailable: transparency plus a shadow.  ~backdrop-filter~ is still declared,
 for the clients that would honour it.
 
-Typography is Work Sans (with JuliaMono for the monospaced bits), both libre
-(SIL Open Font License 1.1) and both declared from the project's own asset host
-rather than asked of a font service, with system fallbacks chosen to sit on the
-same footing.  The colours are
+Typography is Work Sans for the prose, Source Serif 4 for the serif and
+JuliaMono for the monospaced bits, all three libre (SIL Open Font License 1.1)
+and all declared from the project's own asset host rather than asked of a font
+service, with system fallbacks chosen to sit on the same footing.  The colours are
 the everforest palette, so a pingwing message reads as a member of the same
 family as the sites that send it.  All of the shared furniture -- the panel, the
 button, the fact list, the footer, the two text styles -- lives in
@@ -1314,16 +1314,17 @@ license.
 :CUSTOM_ID: on-the-fonts-a-message-asks-for
 :END:
 
-A message is set in two libre families, both under the SIL Open Font License
-1.1: *Work Sans* for its prose and *JuliaMono* for the monospaced runs, a code
-sample or a table of figures.
+A message is set in three libre families, all under the SIL Open Font License
+1.1: *Work Sans* for its sans, *Source Serif 4* for its serif and *JuliaMono*
+for the monospaced runs, a code sample or a table of figures.
 
 A pingwing message does not ship a font: it names those families in its styles
 and declares the faces from the project's own asset host -- never from a font
 service, so a message asks no third party for its type -- and a client that does
 not have them, or refuses to fetch them, which is most of them, reads the
-message in its own system sans and monospace.  The declarations are a courtesy
-to the clients that honour them, never a requirement for reading a message.
+message in its own system sans, serif and monospace.  The declarations are a
+courtesy to the clients that honour them, never a requirement for reading a
+message.
 
 No proprietary font is bundled, served or named anywhere in pingwing.
 

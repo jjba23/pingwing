@@ -1,19 +1,7 @@
-;;; pingwing -- the free and open Lisp-powered notification nexus
-
+;; pingwing - the free and open Lisp-powered notification nexus
+;;
+;; SPDX-License-Identifier: MIT
 ;; Copyright © Josep Bigorra <jjbigorra@gmail.com>
-
-;; pingwing is free software: you can redistribute it and/or modify
-;; it under the terms of the GNU Affero General Public License as published by
-;; the Free Software Foundation, either version 3 of the License, or
-;; (at your option) any later version.
-
-;; pingwing is distributed in the hope that it will be useful,
-;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;; GNU Affero General Public License for more details.
-
-;; You should have received a copy of the GNU Affero General Public License
-;; along with pingwing.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Mail is not the web.  The one rule this module is written around is that a
 ;;; mail client is free to throw away everything in the document's <head>: no
@@ -47,6 +35,7 @@
   #:export (mk-kv-conf-lines mk-css-conf-lines
                              mk-style
                              mail-sans-stack
+                             mail-serif-stack
                              mail-mono-stack
                              mail-head-style
                              mail-light
@@ -178,10 +167,14 @@
 ;; The type faces the happy path asks for.  The first name in each stack is
 ;; the webfont the head style declares; the rest are what a mail client that
 ;; refused the font falls back to, chosen to sit on the same footing -- the
-;; reader's own sans, and a monospace that keeps its columns.  Both families are
-;; libre (SIL Open Font License 1.1) and served from one host of ours.
+;; reader's own sans, serif and monospace, the last keeping its columns.  All
+;; three families are libre (SIL Open Font License 1.1) and served from one host
+;; of ours.
 (define mail-sans-stack
   "'Work Sans','Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans',sans-serif")
+
+(define mail-serif-stack
+  "'Source Serif 4','Source Serif Pro',Georgia,'Times New Roman',serif")
 
 (define mail-mono-stack
   "'JuliaMono','DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,'Courier New',monospace")
@@ -320,18 +313,23 @@ overrides of its dark reading."
   (mk-style (assq-ref mail-styles name)
             #:scheme scheme))
 
-;; The @font-face declarations: Work Sans for the prose and JuliaMono for the
-;; monospaced runs, the two families the inline styles ask for first.  Both are
-;; libre (SIL Open Font License 1.1) and both are served from the project's own
-;; asset host rather than from a font service, so a message asks no third party
-;; for its type; a client that loads neither simply reaches past them to its own
-;; fonts.  Work Sans is a variable font, so one file per style carries the whole
-;; weight axis; JuliaMono ships static weights, hence the pair split at 600.
+;; The @font-face declarations: Work Sans for the prose, Source Serif 4 for the
+;; serif and JuliaMono for the monospaced runs, the three families the inline
+;; styles can ask for.  All are libre (SIL Open Font License 1.1) and all are
+;; served from the project's own asset host rather than from a font service, so a
+;; message asks no third party for its type; a client that loads none of them
+;; simply reaches past them to its own fonts.  The three are variable fonts, so
+;; one file per style carries the whole weight axis; JuliaMono ships static
+;; weights, hence the pair split at 600.
 (define mail-font-faces
   (string-append
    "@font-face{font-family:'Work Sans';font-style:normal;font-weight:100 900;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/work-sans-normal-latin.woff2') format('woff2');}
 "
    "@font-face{font-family:'Work Sans';font-style:italic;font-weight:100 900;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/work-sans-italic-latin.woff2') format('woff2');}
+"
+   "@font-face{font-family:'Source Serif 4';font-style:normal;font-weight:200 900;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/source-serif-4-normal-latin.woff2') format('woff2');}
+"
+   "@font-face{font-family:'Source Serif 4';font-style:italic;font-weight:200 900;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/source-serif-4-italic-latin.woff2') format('woff2');}
 "
    "@font-face{font-family:'JuliaMono';font-style:normal;font-weight:300 500;font-display:swap;src:url('https://jointhefreeworld.org/static-assets/fonts/juliamono-normal-latin.woff2') format('woff2');}
 "
