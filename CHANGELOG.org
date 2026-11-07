@@ -15,6 +15,32 @@ works.
 
 ------------------
 
+* v0.6.2 -- 2026-11-07
+
+The suite is green, and the pipeline deploys again.
+
+Two assertions in =test/veritas/= were red, both before =v0.6.0= and neither the
+fault of the code they were testing; because =v0.6.0= made the suite a gate
+before the restart, each of them also stopped every push from reaching the
+daemon -- =v0.6.0= and =v0.6.1= are tagged but were never deployed.
+
+The doctype assert asked =string-contains= for its answer and handed it to
+=assert-true=, which compares against =#t= itself: the doctype was found, at
+index 600, and the assert failed on the index being an index.  It asks for
+=#t= the way =mail-spec= already asks it.
+
+The other counted every pending row and expected four where a fifth had been
+queued by a fixture that comes after it, so it was measuring the file's own
+growth rather than the question it was asking -- did the value that spells out
+=DROP TABLE tasks= drop the table.  It counts the three rows that file queues
+before the hostile value instead, which is exactly what the drop would have
+taken, and no fixture added later can turn it red.
+
+Nothing in the application changed: no source, no template, no schema, no
+setting.
+
+------------------
+
 * v0.6.1 -- 2026-11-07
 
 The picture in the manual is redrawn.
