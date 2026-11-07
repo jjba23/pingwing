@@ -7,7 +7,7 @@
 #+HTML_HEAD: <link rel="stylesheet" type="text/css" href="https://jointhefreeworld.org/static/css/jointhefreeworld.css" />
 
 [[https://jointhefreeworld.org/ggg/dist/scheme-guile.svg]] [[https://jointhefreeworld.org/ggg/dist/gnu-guix.svg]] [[https://jointhefreeworld.org/ggg/dist/maak.svg]] [[https://jointhefreeworld.org/ggg/dist/gnu-artanis.svg]]
-[[https://jointhefreeworld.org/ggg/dist/license-mit.svg]] [[https://img.shields.io/badge/docs%20license-CC%20BY%204.0-2ea44f.svg]] [[https://jointhefreeworld.org/ggg/dist/jointhefreeworld-org.svg]] [[https://img.shields.io/badge/CI-Byggsteg%20%7C%20Woodpecker-2ea44f.svg]]
+[[https://jointhefreeworld.org/ggg/dist/license-mit.svg]] [[https://img.shields.io/badge/docs%20license-CC%20BY%204.0-2ea44f.svg]] [[https://jointhefreeworld.org/ggg/dist/jointhefreeworld-org.svg]] [[https://img.shields.io/badge/CI-Byggsteg%20%7C%20GitHub-2ea44f.svg]]
 
 #+attr_html: :width 160 :alt PingWing logo
 [[file:logo.svg]]
@@ -1071,12 +1071,16 @@ they make and fill themselves, under the temporary directory.
 :CUSTOM_ID: continuous-integration
 :END:
 
-A push to the =trunk= branch is picked up by [[https://woodpecker-ci.org/][Woodpecker]]
-(~.woodpecker/byggsteg.yaml~), which asks the jointhefreeworld
+A push to the =trunk= branch is picked up by GitHub Actions
+(~.github/workflows/ci.yml~), which asks the jointhefreeworld
 [[https://codeberg.org/jjba23/byggsteg][Byggsteg]] service for a token, submits a job
-for it and polls that job's status.  The job pulls the branch and restarts the
-~pingwing-daemon~, so what is merged is what is running.  Run ~maak test~ before
-you push: the suite is the project's own gate, and it is one command.
+for it and follows that job's log to a green or a red build.  The workflow calls
+[[https://github.com/jjba23/byggsteg-github][byggsteg-github]]'s reusable
+workflow rather than carrying the steps in this repository.  The job runs
+~maak-test~ and then ~pull-and-restart~ on the ~pingwing-daemon~, so what is
+merged is what is running, and a change that breaks the suite stops there.  Run
+~maak test~ before you push: the suite is the project's own gate, and it is one
+command.
 
 ------------------
 
