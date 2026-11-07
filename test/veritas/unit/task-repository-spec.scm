@@ -128,6 +128,11 @@ both drifting together."
 
 (insert-all! queue-rows)
 
+(define queue-ids
+  (map (lambda (t)
+         (assq-ref t
+                   'id)) queue-rows))
+
 (define next-pending
   (get-next-pending-task repository))
 (define pending-batch
@@ -208,9 +213,20 @@ both drifting together."
                              #:got (assq-ref awkward
                                              'subject)))
          (test "a value that spells out SQL changes nothing"
+               ;; The count is of the rows this file queued before the hostile
+               ;; value, not of every pending row: the fixtures that come after
+               ;; this suite add pending rows of their own, and a count of all
+               ;; of them would turn red the day one is added -- while the rows
+               ;; the hostile value would have dropped if it had run as SQL are
+               ;; these three, and they are the ones the assert is about.
                (assert-equal #:name "the table the value named is still there"
-                             #:expect 4
-                             #:got (length (get-pending-tasks repository 10))))))
+                             #:expect 3
+                             #:got (length (filter (lambda (t)
+                                                     (member (assq-ref t
+                                                                       'id)
+                                                             queue-ids))
+                                                   (get-recent-tasks repository
+                                                                     50)))))))
 
 ;;; ====== claiming ======
 
