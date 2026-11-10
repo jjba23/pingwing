@@ -15,6 +15,12 @@ works.
 
 ------------------
 
+* v0.6.6 -- 2026-11-10
+
+- The funding file now carries a custom funding URL that points at
+  [[https://buymeacoffee.com/jjbigorra][Buy Me a Coffee]], so the repository
+  shows a Sponsor button.
+
 * v0.6.5 -- 2026-11-10
 
 - The repository carries =.github/FUNDING.yml=, so GitHub shows a Sponsor
