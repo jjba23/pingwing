@@ -15,6 +15,10 @@ works.
 
 ------------------
 
+* v0.6.7 -- 2026-11-12
+
+- Builds against the channels this project builds against: the jointhefreeworld collection at v1.0.4, and Guix master `3b4e873`.
+
 * v0.6.6 -- 2026-11-10
 
 - The funding file now carries a custom funding URL that points at
