@@ -4,3 +4,6 @@ env.scm
 tmp/*
 *.log
 reports/
+
+# Generated API reference and its rendered output.
+doc/
