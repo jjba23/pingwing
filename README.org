@@ -887,6 +887,14 @@ worker does is a *sweep*:
    ~run-fibers~ scheduler the sweep makes and drains;
 5. rest ~worker-sleep-seconds~, then go again.
 
+#+attr_html: :width 720 :alt A task's path through the queue: posted, pending, claimed, run on a fiber, and either complete or back in the queue
+[[file:resources/diagrams/worker-sweep.svg]]
+
+The figure is those five steps, and the two ways a row leaves a sweep.  Its
+source is =resources/diagrams/worker-sweep.mmd=, rendered with =maak diagrams=;
+=maak docs= generates the library's API reference from the modules themselves,
+with the diagrams their commentaries carry.
+
 This is the same shape [[https://codeberg.org/jjba23/byggsteg][byggsteg]]'s queue uses: a task per fiber, a shared queue
 the workers take from as they free up, and a fibers condition the sweep waits on
 until the last worker stops.

@@ -4,6 +4,7 @@
 ;; Copyright © Josep Bigorra <jjbigorra@gmail.com>
 
 (use-modules (gnu)
+             (gnu packages)
              (guix gexp)
              (guix utils)
              (guix packages)
@@ -266,6 +267,10 @@ checksums to track schema evolution in a @code{migrations_history} table.")
                           guile-gcrypt
                           guile-veritas
                           mutastructura
+                          ;; The reference `maak docs' generates is written by
+                          ;; guile-dokgen, which comes from the
+                          ;; jointhefreeworld channel rather than from Guix.
+                          (specification->package "guile-dokgen")
                           watchexec
                           sqlite
                           bash-minimal

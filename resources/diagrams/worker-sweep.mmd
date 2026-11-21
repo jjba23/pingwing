@@ -1,0 +1,9 @@
+flowchart LR
+  post["a task posted to pingwing"] --> queue["the tasks table: pending"]
+  queue --> sweep["a sweep of the worker"]
+  sweep --> claim["claimed: processing"]
+  claim --> fiber["a fiber per task"]
+  fiber --> thread["the send, on a thread of its own"]
+  thread --> complete["complete"]
+  thread -->|attempts remain| queue
+  thread -->|"max-task-attempts, or no template"| failed["failed, with last_error"]

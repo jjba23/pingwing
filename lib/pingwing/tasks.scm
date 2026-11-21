@@ -3,6 +3,8 @@
 ;; SPDX-License-Identifier: MIT
 ;; Copyright © Josep Bigorra <jjbigorra@gmail.com>
 
+;;; Commentary:
+;;;
 ;;; The queue and what runs it.
 ;;;
 ;;; Ingestion and delivery are two processes that only meet in a row of the
@@ -26,6 +28,20 @@
 ;;; for a minute is waited out rather than losing the message -- and when it
 ;;; finally gives up, or when a template it names does not exist, the task goes
 ;;; to `failed' with `last_error' saying why.
+;;;
+;;; ```mermaid
+;;; flowchart LR
+;;;   post["a task posted to pingwing"] --> queue["the tasks table: pending"]
+;;;   queue --> sweep["a sweep of the worker"]
+;;;   sweep --> claim["claimed: processing"]
+;;;   claim --> fiber["a fiber per task"]
+;;;   fiber --> thread["the send, on a thread of its own"]
+;;;   thread --> complete["complete"]
+;;;   thread -->|attempts remain| queue
+;;;   thread -->|"max-task-attempts, or no template"| failed["failed, with last_error"]
+;;; ```
+;;;
+;;; Code:
 
 (define-module (pingwing tasks)
   #:use-module (ice-9 time)

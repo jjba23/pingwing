@@ -6,6 +6,8 @@
 (define-module (maak)
   #:use-module (maak maak)
   #:use-module ((ice-9 rdelim) #:select (read-line))
+  ;; `scandir' is what `maak diagrams' lists the mermaid sources with.
+  #:use-module (ice-9 ftw)
   #:declarative? #t)
 
 ;; ====== Maak constants ======
@@ -17,6 +19,19 @@
 ;; The file where the Pingwing DB is located.  
 (define pingwing-db
   "pingwing.db")
+
+;; The stylesheet the API reference is read in, served by the project's own
+;; host.
+(define api-docs-css-url
+  "https://jointhefreeworld.org/static/css/jointhefreeworld.css")
+
+;; The library, as dokgen is handed it.  dokgen names a module relative to the
+;; parent of the root it is given, so the root is the directory the modules sit
+;; in -- `(pingwing tasks)' is `lib/pingwing/tasks.scm' -- and not the project
+;; root.  The REST handlers under `app/' are named from the project root
+;; instead, and are therefore not part of this chapter.
+(define library-root
+  "./lib/pingwing")
 
 (define hot-reload-file-types
   '(scm css js))
@@ -53,6 +68,68 @@
   (time-machine-manifest-shell (list "emacs" "-Q" "--batch" "--eval"
                                      (~ "'~s'" emacs-lisp-manual-publish-cmd))
                                #:verbose? #t))
+
+(define (docs)
+  "Generate the library's API reference and render it as HTML.
+
+The reference is extracted from the loaded modules by guile-dokgen, so a name a
+caller can reach is a name the reference documents, with the docstring the
+module gives it.  What is documented is the library -- the queue, the mailer,
+the templates and the SQLite layer under `lib/pingwing' -- rather than the REST
+handlers under `app/', which are named from the project root and answer a
+request rather than being called by one.
+
+Beside the Texinfo dokgen writes the stylesheet and the script the page is read
+with, and a directory of diagrams for the commentaries that carry one; Texinfo
+copies neither, so both are put beside the page that points at them."
+  (delete-file-recursively "doc")
+  (time-machine-manifest-shell
+   (list "dokgen" "api"
+         "--destination" "doc/api"
+         library-root)
+   #:verbose? #t)
+  (mkdir-p "doc/api-dist")
+  ;; `-I doc/api' is what finds the diagrams beside the chapter, and the head
+  ;; below points the pages at the stylesheet and the script dokgen writes
+  ;; there.  `--no-split' keeps the reference one page.
+  (time-machine-manifest-shell
+   (list "texi2any" "-v" "--html" "--no-split"
+         (~ "--css-ref=~a" api-docs-css-url)
+         "-I" "doc/api"
+         "-c" (shell-quote
+               (string-append
+                "EXTRA_HEAD="
+                "<link rel=\"stylesheet\" href=\"dokgen.css\">"
+                "<script src=\"dokgen.js\" defer></script>"))
+         "-o" "doc/api-dist/index.html"
+         "./doc/api/index.texi")
+   #:verbose? #t)
+  (for-each (lambda (asset)
+              (when (file-exists? (~ "doc/api/~a" asset))
+                (cp (~ "doc/api/~a" asset) "doc/api-dist"
+                    #:force? #t #:verbose? #t)))
+            '("dokgen.css" "dokgen.js"))
+  (when (file-exists? "doc/api/diagrams")
+    (cp "doc/api/diagrams" "doc/api-dist" #:force? #t #:verbose? #t)))
+
+(define (diagrams)
+  "Render every mermaid source under resources/diagrams to the SVG beside it.
+
+The images are committed, because the manual shows them and a checkout should
+read without a renderer installed; this task is how they are made again after a
+source changes.  The reference under `doc/api' carries its own diagrams, drawn
+from the modules' commentaries by `maak docs'."
+  (for-each
+   (lambda (name)
+     (let* ((source (in-vicinity "resources/diagrams" name))
+            (image (string-append (string-drop-right source 4) ".svg")))
+       (run (list "mmdc" "-i" source "-o" image
+                  "--backgroundColor" "transparent")
+            #:verbose? #t)))
+   (scandir "resources/diagrams"
+            (lambda (name)
+              (and (not (member name '("." "..")))
+                   (string-suffix? ".mmd" name))))))
 
 (define (migrate)
   "Bring the database up to the schema the source in front of it expects.
