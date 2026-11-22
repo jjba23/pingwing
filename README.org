@@ -12,6 +12,8 @@
 #+attr_html: :width 160 :alt PingWing logo
 [[file:logo.svg]]
 
+- 📖 *API reference:* [[https://jointhefreeworld.org/api-docs/pingwing/index.html][PingWing API reference]]
+
 /the free and open Lisp-powered notification nexus/
 
 *One HTTP call in, a delivered message out.*  Your programs post a little JSON
